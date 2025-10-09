@@ -1,3 +1,12 @@
+# =============================
+# Changelog (with comments)
+# =============================
+# This file lists all notable changes to the project.
+# Beginners: Each version section shows what was added, changed, fixed, or removed.
+# Follow the format at https://keepachangelog.com/en/1.0.0/
+#
+# To add a new entry, copy the format and add your changes under the correct version.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -5,16 +14,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Project Fork and Renaming
+- Forked from WhisperWriter ([savbell/whisper-writer](https://github.com/savbell/whisper-writer)) and renamed to **viapp** ([amalkp814/viapp](https://github.com/amalkp814/viapp)).
+- Updated all project references, links, and documentation to reflect the new name and repository.
+
 ### Added
-- New settings window to configure WhisperWriter.
+- New settings window to configure viapp.
 - New main window to either start the keyboard listener or open the settings window.
-- New continuous recording mode ([Issue #40](https://github.com/savbell/whisper-writer/issues/40)).
-- New option to play a sound when transcription finishes ([Issue #40](https://github.com/savbell/whisper-writer/issues/40)).
+- New continuous recording mode ([Issue #40](https://github.com/amalkp814/viapp/issues/40)).
+- New option to play a sound when transcription finishes ([Issue #40](https://github.com/amalkp814/viapp/issues/40)).
+- Beginner-friendly comments added to all major source files and configuration files for easier understanding and onboarding.
+- Updated `.gitignore` to include all common virtual environment folders and added comments for beginners.
 
 ### Changed
 - Migrated status window from using `tkinter` to `PyQt5`.
 - Migrated from using JSON to using YAML to store configuration settings.
-- Upgraded to latest versions of `openai` and `faster-whisper`, including support for local API ([Issue #32](https://github.com/savbell/whisper-writer/issues/32)).
+- Upgraded to latest versions of `openai` and `faster-whisper`, including support for local API ([Issue #32](https://github.com/amalkp814/viapp/issues/32)).
+- Improved documentation and code comments throughout the project for clarity.
 
 ### Removed
 - No longer using `keyboard` package to listen for key presses.
@@ -51,6 +67,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - Updated Whisper Python package; the local model is now compatible with Python 3.11.
 
-[Unreleased]: https://github.com/savbell/whisper-writer/compare/v1.0.1...HEAD
-[1.0.1]: https://github.com/savbell/whisper-writer/releases/tag/v1.0.0...v1.0.1
-[1.0.0]: https://github.com/savbell/whisper-writer/releases/tag/v1.0.0
+[Unreleased]: https://github.com/amalkp814/viapp/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/amalkp814/viapp/releases/tag/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/amalkp814/viapp/releases/tag/v1.0.0

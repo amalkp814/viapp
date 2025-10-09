@@ -1,3 +1,22 @@
+
+# =============================
+# settings_window.py (with comments)
+# =============================
+# This file defines the SettingsWindow class for viapp's settings UI.
+# Beginners: This window lets you configure all options for viapp, including model, API, recording, and more.
+# It reads the config schema and builds the UI dynamically, saving changes to config.yaml and .env.
+#
+# Key PyQt5 concepts:
+# - QTabWidget: Tabbed interface for organizing settings
+# - QVBoxLayout/QHBoxLayout: Layout managers for arranging widgets
+# - Signals: Used to notify other parts of the app when settings are saved/closed
+# - Dynamic widget creation: UI is built from the config schema
+# - QMessageBox: Dialogs for help, confirmation, and info
+#
+# Key viapp concepts:
+# - ConfigManager: Handles reading/writing config and schema
+# - .env file: Stores sensitive info like API keys
+
 import os
 import sys
 from dotenv import set_key, load_dotenv
@@ -7,38 +26,53 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QCoreApplication, QProcess, pyqtSignal
 
+# Add parent directory to sys.path so we can import base_window and utils
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui.base_window import BaseWindow
 from utils import ConfigManager
 
+# Load environment variables from .env file (for API keys, etc.)
 load_dotenv()
 
 class SettingsWindow(BaseWindow):
+    # Signals to notify when settings are closed or saved
     settings_closed = pyqtSignal()
     settings_saved = pyqtSignal()
 
     def __init__(self):
-        """Initialize the settings window."""
+        """
+        Initialize the settings window.
+        - Loads the config schema
+        - Sets up the UI with tabs and buttons
+        """
         super().__init__('Settings', 700, 700)
-        self.schema = ConfigManager.get_schema()
+        self.schema = ConfigManager.get_schema()  # Get config schema (structure of all settings)
         self.init_settings_ui()
 
     def init_settings_ui(self):
-        """Initialize the settings user interface."""
+        """
+        Set up the main settings UI:
+        - Creates tabs for each category (model, recording, etc.)
+        - Adds Save and Reset buttons
+        - Connects API/local toggle logic
+        """
         self.tabs = QTabWidget()
         self.main_layout.addWidget(self.tabs)
 
-        self.create_tabs()
-        self.create_buttons()
+        self.create_tabs()     # Build tabs from schema
+        self.create_buttons()  # Add Save/Reset buttons
 
-        # Connect the use_api checkbox state change
+        # Connect the use_api checkbox to toggle API/local options
         self.use_api_checkbox = self.findChild(QCheckBox, 'model_options_use_api_input')
         if self.use_api_checkbox:
             self.use_api_checkbox.stateChanged.connect(lambda: self.toggle_api_local_options(self.use_api_checkbox.isChecked()))
             self.toggle_api_local_options(self.use_api_checkbox.isChecked())
 
     def create_tabs(self):
-        """Create tabs for each category in the schema."""
+        """
+        Create a tab for each category in the config schema (e.g. model_options, recording_options).
+        Each tab contains widgets for all settings in that category.
+        """
         for category, settings in self.schema.items():
             tab = QWidget()
             tab_layout = QVBoxLayout()
@@ -49,16 +83,25 @@ class SettingsWindow(BaseWindow):
             tab_layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
     def create_settings_widgets(self, layout, category, settings):
-        """Create widgets for each setting in a category."""
+        """
+        Create widgets for each setting in a category.
+        Handles both top-level and nested settings (e.g. model_options > api > api_key).
+        """
         for sub_category, sub_settings in settings.items():
             if isinstance(sub_settings, dict) and 'value' in sub_settings:
+                # Top-level setting (not nested)
                 self.add_setting_widget(layout, sub_category, sub_settings, category)
             else:
+                # Nested settings (e.g. api, local)
                 for key, meta in sub_settings.items():
                     self.add_setting_widget(layout, key, meta, category, sub_category)
 
     def create_buttons(self):
-        """Create reset and save buttons."""
+        """
+        Create Reset and Save buttons at the bottom of the window.
+        - Reset: Reloads saved config values
+        - Save: Saves changes to config.yaml and .env
+        """
         reset_button = QPushButton('Reset to saved settings')
         reset_button.clicked.connect(self.reset_settings)
         self.main_layout.addWidget(reset_button)
@@ -68,7 +111,10 @@ class SettingsWindow(BaseWindow):
         self.main_layout.addWidget(save_button)
 
     def add_setting_widget(self, layout, key, meta, category, sub_category=None):
-        """Add a setting widget to the layout."""
+        """
+        Add a single setting widget (label, input, help button) to the layout.
+        Handles naming for later lookup and help tooltips.
+        """
         item_layout = QHBoxLayout()
         label = QLabel(f"{key.replace('_', ' ').capitalize()}:")
         label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -77,7 +123,7 @@ class SettingsWindow(BaseWindow):
         if not widget:
             return
 
-        help_button = self.create_help_button(meta.get('description', ''))
+        help_button = self.create_help_button(meta.get('description', ''))  # Tooltip/help dialog
 
         item_layout.addWidget(label)
         if isinstance(widget, QWidget):
@@ -87,7 +133,7 @@ class SettingsWindow(BaseWindow):
         item_layout.addWidget(help_button)
         layout.addLayout(item_layout)
 
-        # Set object names for the widget, label, and help button
+        # Set object names for later lookup (used for toggling, updating, etc.)
         widget_name = f"{category}_{sub_category}_{key}_input" if sub_category else f"{category}_{key}_input"
         label_name = f"{category}_{sub_category}_{key}_label" if sub_category else f"{category}_{key}_label"
         help_name = f"{category}_{sub_category}_{key}_help" if sub_category else f"{category}_{key}_help"
@@ -104,7 +150,10 @@ class SettingsWindow(BaseWindow):
                 line_edit.setObjectName(widget_name)
 
     def create_widget_for_type(self, key, meta, category, sub_category):
-        """Create a widget based on the meta type."""
+        """
+        Create a widget based on the setting's type and options.
+        Supports checkboxes, dropdowns, text fields, and file pickers.
+        """
         meta_type = meta.get('type')
         current_value = self.get_config_value(category, sub_category, key, meta)
 
@@ -119,6 +168,10 @@ class SettingsWindow(BaseWindow):
         return None
 
     def create_checkbox(self, value, key):
+        """
+        Create a checkbox widget for boolean settings.
+        Special handling for 'use_api' to allow toggling API/local options.
+        """
         widget = QCheckBox()
         widget.setChecked(value)
         if key == 'use_api':
@@ -126,12 +179,20 @@ class SettingsWindow(BaseWindow):
         return widget
 
     def create_combobox(self, value, options):
+        """
+        Create a dropdown (combobox) for settings with predefined options.
+        """
         widget = QComboBox()
         widget.addItems(options)
         widget.setCurrentText(value)
         return widget
 
     def create_line_edit(self, value, key=None):
+        """
+        Create a text field for string/int/float settings.
+        - For 'api_key', hides text for security
+        - For 'model_path', adds a Browse button for file selection
+        """
         widget = QLineEdit(value)
         if key == 'api_key':
             widget.setEchoMode(QLineEdit.Password)
@@ -149,6 +210,9 @@ class SettingsWindow(BaseWindow):
         return widget
 
     def create_help_button(self, description):
+        """
+        Create a help button with a tooltip and info dialog for each setting.
+        """
         help_button = QToolButton()
         help_button.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
         help_button.setAutoRaise(True)
@@ -159,21 +223,34 @@ class SettingsWindow(BaseWindow):
         return help_button
 
     def get_config_value(self, category, sub_category, key, meta):
+        """
+        Get the current value for a setting from the config, falling back to the default in the schema.
+        """
         if sub_category:
             return ConfigManager.get_config_value(category, sub_category, key) or meta['value']
         return ConfigManager.get_config_value(category, key) or meta['value']
 
     def browse_model_path(self, widget):
+        """
+        Open a file dialog to select a Whisper model file for local transcription.
+        """
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Whisper Model File", "", "Model Files (*.bin);;All Files (*)")
         if file_path:
             widget.setText(file_path)
 
     def show_description(self, description):
-        """Show a description dialog."""
+        """
+        Show a popup dialog with a description for a setting (when help button is clicked).
+        """
         QMessageBox.information(self, 'Description', description)
 
     def save_settings(self):
-        """Save the settings to the config file and .env file."""
+        """
+        Save all settings to config.yaml and .env file.
+        - Iterates over all widgets and stores their values
+        - API key is saved securely to .env
+        - Shows confirmation dialog and restarts app
+        """
         self.iterate_settings(self.save_setting)
 
         # Save the API key to the .env file
@@ -181,7 +258,7 @@ class SettingsWindow(BaseWindow):
         set_key('.env', 'OPENAI_API_KEY', api_key)
         os.environ['OPENAI_API_KEY'] = api_key
 
-        # Remove the API key from the config
+        # Remove the API key from the config (security)
         ConfigManager.set_config_value(None, 'model_options', 'api', 'api_key')
 
         ConfigManager.save_config()
@@ -190,6 +267,9 @@ class SettingsWindow(BaseWindow):
         self.close()
 
     def save_setting(self, widget, category, sub_category, key, meta):
+        """
+        Save a single setting value from a widget to the config.
+        """
         value = self.get_widget_value_typed(widget, meta.get('type'))
         if sub_category:
             ConfigManager.set_config_value(value, category, sub_category, key)
@@ -197,16 +277,22 @@ class SettingsWindow(BaseWindow):
             ConfigManager.set_config_value(value, category, key)
 
     def reset_settings(self):
-        """Reset the settings to the saved values."""
+        """
+        Reset all settings to the last saved values (undo unsaved changes).
+        """
         ConfigManager.reload_config()
         self.update_widgets_from_config()
 
     def update_widgets_from_config(self):
-        """Update all widgets with values from the current configuration."""
+        """
+        Update all widgets in the UI with values from the current config file.
+        """
         self.iterate_settings(self.update_widget_value)
 
     def update_widget_value(self, widget, category, sub_category, key, meta):
-        """Update a single widget with the value from the configuration."""
+        """
+        Update a single widget with the value from the config file.
+        """
         if sub_category:
             config_value = ConfigManager.get_config_value(category, sub_category, key)
         else:
@@ -215,7 +301,9 @@ class SettingsWindow(BaseWindow):
         self.set_widget_value(widget, config_value, meta.get('type'))
 
     def set_widget_value(self, widget, value, value_type):
-        """Set the value of the widget."""
+        """
+        Set the value of a widget (checkbox, dropdown, text field, etc.)
+        """
         if isinstance(widget, QCheckBox):
             widget.setChecked(value)
         elif isinstance(widget, QComboBox):
@@ -229,7 +317,9 @@ class SettingsWindow(BaseWindow):
                 line_edit.setText(str(value) if value is not None else '')
 
     def get_widget_value_typed(self, widget, value_type):
-        """Get the value of the widget with proper typing."""
+        """
+        Get the value from a widget, converting to the correct type (bool, int, float, str).
+        """
         if isinstance(widget, QCheckBox):
             return widget.isChecked()
         elif isinstance(widget, QComboBox):
@@ -250,17 +340,20 @@ class SettingsWindow(BaseWindow):
         return None
 
     def toggle_api_local_options(self, use_api):
-        """Toggle visibility of API and local options."""
+        """
+        Show/hide API and local model options depending on the 'use_api' checkbox.
+        """
         self.iterate_settings(lambda w, c, s, k, m: self.toggle_widget_visibility(w, c, s, k, use_api))
 
     def toggle_widget_visibility(self, widget, category, sub_category, key, use_api):
+        """
+        Show/hide individual widgets, labels, and help buttons for API/local settings.
+        """
         if sub_category in ['api', 'local']:
             widget.setVisible(use_api if sub_category == 'api' else not use_api)
-            
             # Also toggle visibility of the corresponding label and help button
             label = self.findChild(QLabel, f"{category}_{sub_category}_{key}_label")
             help_button = self.findChild(QToolButton, f"{category}_{sub_category}_{key}_help")
-            
             if label:
                 label.setVisible(use_api if sub_category == 'api' else not use_api)
             if help_button:
@@ -268,7 +361,9 @@ class SettingsWindow(BaseWindow):
 
 
     def iterate_settings(self, func):
-        """Iterate over all settings and apply a function to each."""
+        """
+        Iterate over all settings widgets and apply a function (save, update, toggle, etc.) to each.
+        """
         for category, settings in self.schema.items():
             for sub_category, sub_settings in settings.items():
                 if isinstance(sub_settings, dict) and 'value' in sub_settings:
@@ -282,7 +377,11 @@ class SettingsWindow(BaseWindow):
                             func(widget, category, sub_category, key, meta)
 
     def closeEvent(self, event):
-        """Confirm before closing the settings window without saving."""
+        """
+        Confirm before closing the settings window if there are unsaved changes.
+        If user chooses Yes, revert to last saved config and close.
+        If No, keep the window open.
+        """
         reply = QMessageBox.question(
             self,
             'Close without saving?',

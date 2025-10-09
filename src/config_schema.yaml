@@ -1,4 +1,13 @@
-# Configuration options for the Whisper models
+###############################################################
+# WhisperWriter Configuration Schema
+# This file describes all possible configuration options and their meanings.
+# Each section below is commented for beginners.
+###############################################################
+
+# =============================
+# Model Options
+# =============================
+# Settings for using Whisper models (local or API)
 model_options:
   use_api:
     value: false
@@ -84,7 +93,10 @@ model_options:
       type: str
       description: "The path to the local Whisper model. If not specified, the default model will be downloaded."
 
-# Configuration options for activation and recording
+###############################################################
+# Recording Options
+# =============================
+# Settings for hotkey activation and audio recording
 recording_options:
   activation_key:
     value: ctrl+shift+space
@@ -124,7 +136,10 @@ recording_options:
     type: int
     description: "The minimum duration in milliseconds for a recording to be processed. Recordings shorter than this will be discarded."
 
-# Post-processing options for the transcribed text
+###############################################################
+# Post-Processing Options
+# =============================
+# Settings for modifying the transcribed text before output
 post_processing:
   writing_key_press_delay:
     value: 0.005
@@ -151,7 +166,10 @@ post_processing:
       - ydotool
       - dotool
 
-# Miscellaneous settings
+###############################################################
+# Miscellaneous Settings
+# =============================
+# Other general options for app behavior
 misc:
   print_to_terminal:
     value: true

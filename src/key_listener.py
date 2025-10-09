@@ -1,28 +1,35 @@
-from abc import ABC, abstractmethod
-from enum import Enum, auto
-from typing import Callable, Set
 
-from utils import ConfigManager
+# Standard library imports
+from abc import ABC, abstractmethod  # For abstract base classes
+from enum import Enum, auto  # For creating enumerations
+from typing import Callable, Set  # For type hints
+
+# Local module import
+from utils import ConfigManager  # For configuration management
 
 
+
+# Enum for different types of input events (keyboard and mouse)
 class InputEvent(Enum):
-    KEY_PRESS = auto()
-    KEY_RELEASE = auto()
-    MOUSE_PRESS = auto()
-    MOUSE_RELEASE = auto()
+    KEY_PRESS = auto()      # Key is pressed down
+    KEY_RELEASE = auto()    # Key is released
+    MOUSE_PRESS = auto()    # Mouse button is pressed
+    MOUSE_RELEASE = auto()  # Mouse button is released
 
+
+# Enum for all possible key codes (keyboard, mouse, media, etc.)
 class KeyCode(Enum):
     # Modifier keys
-    CTRL_LEFT = auto()
-    CTRL_RIGHT = auto()
-    SHIFT_LEFT = auto()
-    SHIFT_RIGHT = auto()
-    ALT_LEFT = auto()
-    ALT_RIGHT = auto()
-    META_LEFT = auto()
-    META_RIGHT = auto()
+    CTRL_LEFT = auto()      # Left Control key
+    CTRL_RIGHT = auto()     # Right Control key
+    SHIFT_LEFT = auto()     # Left Shift key
+    SHIFT_RIGHT = auto()    # Right Shift key
+    ALT_LEFT = auto()       # Left Alt key
+    ALT_RIGHT = auto()      # Right Alt key
+    META_LEFT = auto()      # Left Meta/Windows key
+    META_RIGHT = auto()     # Right Meta/Windows key
 
-    # Function keys
+    # Function keys (F1-F24)
     F1 = auto()
     F2 = auto()
     F3 = auto()
@@ -48,7 +55,7 @@ class KeyCode(Enum):
     F23 = auto()
     F24 = auto()
 
-    # Number keys
+    # Number keys (top row)
     ONE = auto()
     TWO = auto()
     THREE = auto()
@@ -60,7 +67,7 @@ class KeyCode(Enum):
     NINE = auto()
     ZERO = auto()
 
-    # Letter keys
+    # Letter keys (A-Z)
     A = auto()
     B = auto()
     C = auto()
@@ -89,22 +96,22 @@ class KeyCode(Enum):
     Z = auto()
 
     # Special keys
-    SPACE = auto()
-    ENTER = auto()
-    TAB = auto()
-    BACKSPACE = auto()
-    ESC = auto()
-    INSERT = auto()
-    DELETE = auto()
-    HOME = auto()
-    END = auto()
-    PAGE_UP = auto()
-    PAGE_DOWN = auto()
-    CAPS_LOCK = auto()
-    NUM_LOCK = auto()
-    SCROLL_LOCK = auto()
-    PAUSE = auto()
-    PRINT_SCREEN = auto()
+    SPACE = auto()          # Spacebar
+    ENTER = auto()          # Enter/Return
+    TAB = auto()            # Tab
+    BACKSPACE = auto()      # Backspace
+    ESC = auto()            # Escape
+    INSERT = auto()         # Insert
+    DELETE = auto()         # Delete
+    HOME = auto()           # Home
+    END = auto()            # End
+    PAGE_UP = auto()        # Page Up
+    PAGE_DOWN = auto()      # Page Down
+    CAPS_LOCK = auto()      # Caps Lock
+    NUM_LOCK = auto()       # Num Lock
+    SCROLL_LOCK = auto()    # Scroll Lock
+    PAUSE = auto()          # Pause/Break
+    PRINT_SCREEN = auto()   # Print Screen/SysRq
 
     # Arrow keys
     UP = auto()
@@ -199,6 +206,8 @@ class KeyCode(Enum):
     MOUSE_SIDE2 = auto()
     MOUSE_SIDE3 = auto()
 
+
+# Abstract base class for input backends (Evdev, Pynput, etc.)
 class InputBackend(ABC):
     """
     Abstract base class for input backends.
@@ -242,18 +251,29 @@ class InputBackend(ABC):
         """
         pass
 
+
+# Represents a combination of keys that need to be pressed simultaneously
 class KeyChord:
     """
     Represents a combination of keys that need to be pressed simultaneously.
+    Used for hotkey detection (e.g., Ctrl+Shift+A).
     """
 
     def __init__(self, keys: Set[KeyCode | frozenset[KeyCode]]):
-        """Initialize the KeyChord."""
-        self.keys = keys
-        self.pressed_keys: Set[KeyCode] = set()
+        """
+        Initialize the KeyChord.
+        :param keys: Set of KeyCode or frozenset of KeyCodes (for modifiers)
+        """
+        self.keys = keys  # Keys required for the chord
+        self.pressed_keys: Set[KeyCode] = set()  # Currently pressed keys
 
     def update(self, key: KeyCode, event_type: InputEvent) -> bool:
-        """Update the state of pressed keys and check if the chord is active."""
+        """
+        Update the state of pressed keys and check if the chord is active.
+        :param key: The key that changed state
+        :param event_type: Was it pressed or released?
+        :return: True if chord is active, False otherwise
+        """
         if event_type == InputEvent.KEY_PRESS:
             self.pressed_keys.add(key)
         elif event_type == InputEvent.KEY_RELEASE:
@@ -262,40 +282,58 @@ class KeyChord:
         return self.is_active()
 
     def is_active(self) -> bool:
-        """Check if all keys in the chord are currently pressed."""
+        """
+        Check if all keys in the chord are currently pressed.
+        :return: True if all required keys are pressed
+        """
         for key in self.keys:
             if isinstance(key, frozenset):
+                # For modifier groups (e.g., Ctrl can be left or right)
                 if not any(k in self.pressed_keys for k in key):
                     return False
             elif key not in self.pressed_keys:
                 return False
         return True
 
+
+# Main class for listening to hotkeys and managing input backends
 class KeyListener:
     """
     Manages input backends and listens for specific key combinations.
+    Handles hotkey detection and triggers callbacks when activated/deactivated.
     """
 
     def __init__(self):
-        """Initialize the KeyListener with backends and activation keys."""
-        self.backends = []
-        self.active_backend = None
-        self.key_chord = None
+        """
+        Initialize the KeyListener with backends and activation keys.
+        Loads activation keys, sets up input backends, and selects the active backend.
+        """
+        self.backends = []  # List of available input backends
+        self.active_backend = None  # Currently active backend
+        self.key_chord = None  # KeyChord for hotkey detection
         self.callbacks = {
-            "on_activate": [],
-            "on_deactivate": []
+            "on_activate": [],  # Callbacks for activation
+            "on_deactivate": [] # Callbacks for deactivation
         }
         self.load_activation_keys()
         self.initialize_backends()
         self.select_backend_from_config()
 
+
     def initialize_backends(self):
-        """Initialize available input backends."""
+        """
+        Initialize available input backends.
+        Checks which backends are available and creates their instances.
+        """
         backend_classes = [EvdevBackend, PynputBackend]
         self.backends = [backend_class() for backend_class in backend_classes if backend_class.is_available()]
 
+
     def select_backend_from_config(self):
-        """Select the active backend based on configuration."""
+        """
+        Select the active backend based on configuration.
+        Uses config to choose between available backends (auto, evdev, pynput).
+        """
         preferred_backend = ConfigManager.get_config_value('recording_options', 'input_backend')
 
         if preferred_backend == 'auto':
@@ -316,15 +354,23 @@ class KeyListener:
                 print(f"Unknown backend '{preferred_backend}'. Falling back to auto selection.")
                 self.select_active_backend()
 
+
     def select_active_backend(self):
-        """Select the first available backend as active."""
+        """
+        Select the first available backend as active.
+        Used for auto-selection if no preference is set.
+        """
         if not self.backends:
             raise RuntimeError("No supported input backend found")
         self.active_backend = self.backends[0]
         self.active_backend.on_input_event = self.on_input_event
 
+
     def set_active_backend(self, backend_class):
-        """Set a specific backend as active."""
+        """
+        Set a specific backend as active.
+        Switches to the requested backend if available.
+        """
         new_backend = next((b for b in self.backends if isinstance(b, backend_class)), None)
         if new_backend:
             if self.active_backend:
@@ -335,30 +381,50 @@ class KeyListener:
         else:
             raise ValueError(f"Backend {backend_class.__name__} is not available")
 
+
     def update_backend(self):
-        """Update the active backend based on current configuration."""
+        """
+        Update the active backend based on current configuration.
+        Useful if config changes at runtime.
+        """
         self.select_backend_from_config()
 
+
     def start(self):
-        """Start the active backend."""
+        """
+        Start the active backend.
+        Begins listening for input events.
+        """
         if self.active_backend:
             self.active_backend.start()
         else:
             raise RuntimeError("No active backend selected")
 
+
     def stop(self):
-        """Stop the active backend."""
+        """
+        Stop the active backend.
+        Stops listening for input events.
+        """
         if self.active_backend:
             self.active_backend.stop()
 
+
     def load_activation_keys(self):
-        """Load activation keys from configuration."""
+        """
+        Load activation keys from configuration.
+        Reads hotkey combination from config and sets up KeyChord.
+        """
         key_combination = ConfigManager.get_config_value('recording_options', 'activation_key')
         keys = self.parse_key_combination(key_combination)
         self.set_activation_keys(keys)
 
+
     def parse_key_combination(self, combination_string: str) -> Set[KeyCode | frozenset[KeyCode]]:
-        """Parse a string representation of key combination into a set of KeyCodes."""
+        """
+        Parse a string representation of key combination into a set of KeyCodes.
+        E.g., 'Ctrl+Shift+A' -> {frozenset({CTRL_LEFT, CTRL_RIGHT}), frozenset({SHIFT_LEFT, SHIFT_RIGHT}), A}
+        """
         keys = set()
         key_map = {
             'CTRL': frozenset({KeyCode.CTRL_LEFT, KeyCode.CTRL_RIGHT}),
@@ -379,12 +445,20 @@ class KeyListener:
                     print(f"Unknown key: {key}")
         return keys
 
+
     def set_activation_keys(self, keys: Set[KeyCode]):
-        """Set the activation keys for the KeyChord."""
+        """
+        Set the activation keys for the KeyChord.
+        :param keys: Set of KeyCodes for hotkey
+        """
         self.key_chord = KeyChord(keys)
 
+
     def on_input_event(self, event):
-        """Handle input events and trigger callbacks if the key chord becomes active or inactive."""
+        """
+        Handle input events and trigger callbacks if the key chord becomes active or inactive.
+        Called by the backend when a key/mouse event occurs.
+        """
         if not self.key_chord or not self.active_backend:
             return
 
@@ -393,23 +467,38 @@ class KeyListener:
         was_active = self.key_chord.is_active()
         is_active = self.key_chord.update(key, event_type)
 
+        # If chord just became active, trigger activation callbacks
         if not was_active and is_active:
             self._trigger_callbacks("on_activate")
+        # If chord just became inactive, trigger deactivation callbacks
         elif was_active and not is_active:
             self._trigger_callbacks("on_deactivate")
 
+
     def add_callback(self, event: str, callback: Callable):
-        """Add a callback function for a specific event."""
+        """
+        Add a callback function for a specific event.
+        :param event: 'on_activate' or 'on_deactivate'
+        :param callback: Function to call when event occurs
+        """
         if event in self.callbacks:
             self.callbacks[event].append(callback)
 
+
     def _trigger_callbacks(self, event: str):
-        """Trigger all callbacks associated with a specific event."""
+        """
+        Trigger all callbacks associated with a specific event.
+        Calls all registered functions for the event.
+        """
         for callback in self.callbacks.get(event, []):
             callback()
 
+
     def update_activation_keys(self):
-        """Update activation keys from the current configuration."""
+        """
+        Update activation keys from the current configuration.
+        Useful if config changes at runtime.
+        """
         self.load_activation_keys()
 
 class EvdevBackend(InputBackend):

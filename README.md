@@ -1,4 +1,6 @@
-# <img src="./assets/ww-logo.png" alt="WhisperWriter icon" width="25" height="25"> WhisperWriter
+
+# <img src="./assets/ww-logo.png" alt="viapp icon" width="25" height="25"> viapp
+
 
 ![version](https://img.shields.io/badge/version-1.0.1-blue)
 
@@ -6,9 +8,11 @@
     <img src="./assets/ww-demo-image-02.gif" alt="WhisperWriter demo gif" width="340" height="136">
 </p>
 
-**Update (2024-05-28):** I've just merged in a major rewrite of WhisperWriter! We've migrated from using `tkinter` to using `PyQt5` for the UI, added a new settings window for configuration, a new continuous recording mode, support for a local API, and more! Please be patient as I work out any bugs that may have been introduced in the process. If you encounter any problems, please [open a new issue](https://github.com/savbell/whisper-writer/issues)!
 
-WhisperWriter is a small speech-to-text app that uses [OpenAI's Whisper model](https://openai.com/research/whisper) to auto-transcribe recordings from a user's microphone to the active window.
+**Update (2024-05-28):** Major rewrite merged! We've migrated from using `tkinter` to using `PyQt5` for the UI, added a new settings window for configuration, a new continuous recording mode, support for a local API, and more! Please be patient as I work out any bugs that may have been introduced in the process. If you encounter any problems, please [open a new issue](https://github.com/amalkp814/viapp/issues)!
+
+
+viapp is a small speech-to-text app that uses [OpenAI's Whisper model](https://openai.com/research/whisper) to auto-transcribe recordings from a user's microphone to the active window.
 
 Once started, the script runs in the background and waits for a keyboard shortcut to be pressed (`ctrl+shift+space` by default). When the shortcut is pressed, the app starts recording from your microphone. There are four recording modes to choose from:
 - `continuous` (default): Recording will stop after a long enough pause in your speech. The app will transcribe the text and then start recording again. To stop listening, press the keyboard shortcut again.
@@ -16,11 +20,14 @@ Once started, the script runs in the background and waits for a keyboard shortcu
 - `press_to_toggle` Recording will stop when the keyboard shortcut is pressed again. Recording will not start until the keyboard shortcut is pressed again.
 - `hold_to_record` Recording will continue until the keyboard shortcut is released. Recording will not start until the keyboard shortcut is held down again.
 
+
 You can change the keyboard shortcut (`activation_key`) and recording mode in the [Configuration Options](#configuration-options). While recording and transcribing, a small status window is displayed that shows the current stage of the process (but this can be turned off). Once the transcription is complete, the transcribed text will be automatically written to the active window.
+
 
 The transcription can either be done locally through the [faster-whisper Python package](https://github.com/SYSTRAN/faster-whisper/) or through a request to [OpenAI's API](https://platform.openai.com/docs/guides/speech-to-text). By default, the app will use a local model, but you can change this in the [Configuration Options](#configuration-options). If you choose to use the API, you will need to either provide your OpenAI API key or change the base URL endpoint.
 
-**Fun fact:** Almost the entirety of the initial release of the project was pair-programmed with [ChatGPT-4](https://openai.com/product/gpt-4) and [GitHub Copilot](https://github.com/features/copilot) using VS Code. Practically every line, including most of this README, was written by AI. After the initial prototype was finished, WhisperWriter was used to write a lot of the prompts as well!
+
+**Fun fact:** Almost the entirety of the initial release of the project was pair-programmed with [ChatGPT-4](https://openai.com/product/gpt-4) and [GitHub Copilot](https://github.com/features/copilot) using VS Code. Practically every line, including most of this README, was written by AI. After the initial prototype was finished, viapp was used to write a lot of the prompts as well!
 
 ## Getting Started
 
@@ -71,9 +78,9 @@ To set up and run the project, follow these steps:
 
 #### 1. Clone the repository:
 
-```
-git clone https://github.com/savbell/whisper-writer
-cd whisper-writer
+```bash
+git clone https://github.com/amalkp814/viapp
+cd viapp
 ```
 
 #### 2. Create a virtual environment and activate it:
@@ -90,7 +97,10 @@ venv\Scripts\activate
 
 #### 3. Install the required packages:
 
-```
+```bash
+# Install all required Python packages listed in requirements.txt
+# Run this command inside your virtual environment (see previous step).
+# This ensures your project has all the dependencies it needs to run.
 pip install -r requirements.txt
 ```
 
@@ -100,12 +110,14 @@ pip install -r requirements.txt
 python run.py
 ```
 
-#### 5. Configure and start WhisperWriter:
+
+#### 5. Configure and start viapp:
 On first run, a Settings window should appear. Once configured and saved, another window will open. Press "Start" to activate the keyboard listener. Press the activation key (`ctrl+shift+space` by default) to start recording and transcribing to the active window.
 
 ### Configuration Options
 
-WhisperWriter uses a configuration file to customize its behaviour. To set up the configuration, open the Settings window:
+
+viapp uses a configuration file to customize its behaviour. To set up the configuration, open the Settings window:
 
 <p align="center">
     <img src="./assets/ww-settings-demo.gif" alt="WhisperWriter Settings window demo gif" width="350" height="350">
@@ -171,11 +183,53 @@ Below are features I am planning to add in the near future:
 Below are features not currently planned:
 - [ ] Pipelining audio files
 
+
 Implemented features can be found in the [CHANGELOG](CHANGELOG.md).
 
 ## Contributing
 
-Contributions are welcome! I created this project for my own personal use and didn't expect it to get much attention, so I haven't put much effort into testing or making it easy for others to contribute. If you have ideas or suggestions, feel free to [open a pull request](https://github.com/savbell/whisper-writer/pulls) or [create a new issue](https://github.com/savbell/whisper-writer/issues/new). I'll do my best to review and respond as time allows.
+
+
+Contributions are welcome! I created this project for my own personal use and didn't expect it to get much attention, so I haven't put much effort into testing or making it easy for others to contribute. If you have ideas or suggestions, feel free to [open a pull request](https://github.com/amalkp814/viapp/pulls) or [create a new issue](https://github.com/amalkp814/viapp/issues/new). I'll do my best to review and respond as time allows.
+
+## Forking and Renaming viapp
+
+If you want to create your own version of viapp, you can fork and rename the project. This is useful if you want to customize the app for your own needs or contribute under a different name.
+
+### How to Fork and Rename
+
+1. **Fork the repository on GitHub:**
+  - Go to [viapp on GitHub](https://github.com/amalkp814/viapp).
+  - Click the "Fork" button at the top right to create your own copy.
+
+2. **Clone your fork locally:**
+  - Replace `<your-username>` with your GitHub username:
+    ```bash
+    git clone https://github.com/<your-username>/viapp.git
+    cd viapp
+    ```
+
+3. **Rename the project:**
+  - Change the folder name and all references in files (README.md, LICENSE, etc.) from `viapp` to your new project name.
+  - Update the project icon and assets if desired.
+
+4. **Update metadata:**
+  - Edit `README.md` to reflect your new project name, description, and links.
+  - Update the `CHANGELOG.md` to note the fork and renaming.
+  - Change the GitHub repository description and settings as needed.
+
+5. **Push your changes:**
+  - Commit your updates and push to your fork:
+    ```bash
+    git add .
+    git commit -m "Renamed project to <new-name> and updated metadata"
+    git push
+    ```
+
+6. **(Optional) Publish your fork:**
+  - Make your repository public and share your new project link.
+
+**Tip:** If you contribute back, please open a pull request to the original [viapp](https://github.com/amalkp814/viapp) repository!
 
 ## Credits
 

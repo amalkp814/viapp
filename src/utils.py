@@ -1,33 +1,54 @@
-import yaml
-import os
 
+# Standard library imports
+import os  # For file and path operations
+
+# Third-party library import
+import yaml  # For reading and writing YAML files
+
+
+# ConfigManager is a singleton class for managing app configuration
 class ConfigManager:
-    _instance = None
+    _instance = None  # Holds the singleton instance
 
     def __init__(self):
-        """Initialize the ConfigManager instance."""
-        self.config = None
-        self.schema = None
+        """
+        Initialize the ConfigManager instance.
+        Loads config and schema when created.
+        """
+        self.config = None  # Stores the current configuration
+        self.schema = None  # Stores the configuration schema
+
 
     @classmethod
     def initialize(cls, schema_path=None):
-        """Initialize the ConfigManager with the given schema path."""
+        """
+        Initialize the ConfigManager with the given schema path.
+        Loads schema, default config, and merges user config.
+        """
         if cls._instance is None:
             cls._instance = cls()
             cls._instance.schema = cls._instance.load_config_schema(schema_path)
             cls._instance.config = cls._instance.load_default_config()
             cls._instance.load_user_config()
 
+
     @classmethod
     def get_schema(cls):
-        """Get the configuration schema."""
+        """
+        Get the configuration schema.
+        Returns the schema loaded from config_schema.yaml.
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
         return cls._instance.schema
 
+
     @classmethod
     def get_config_section(cls, *keys):
-        """Get a specific section of the configuration."""
+        """
+        Get a specific section of the configuration.
+        Returns a nested section (e.g., 'model_options', 'local').
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
 
@@ -39,9 +60,13 @@ class ConfigManager:
                 return {}
         return section
 
+
     @classmethod
     def get_config_value(cls, *keys):
-        """Get a specific configuration value using nested keys."""
+        """
+        Get a specific configuration value using nested keys.
+        Returns a single value (e.g., 'sample_rate').
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
 
@@ -53,9 +78,13 @@ class ConfigManager:
                 return None
         return value
 
+
     @classmethod
     def set_config_value(cls, value, *keys):
-        """Set a specific configuration value using nested keys."""
+        """
+        Set a specific configuration value using nested keys.
+        Updates the config in memory (does not save to file).
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
 
@@ -68,9 +97,13 @@ class ConfigManager:
             config = config[key]
         config[keys[-1]] = value
 
+
     @staticmethod
     def load_config_schema(schema_path=None):
-        """Load the configuration schema from a YAML file."""
+        """
+        Load the configuration schema from a YAML file.
+        Reads config_schema.yaml and returns its contents.
+        """
         if schema_path is None:
             base_dir = os.path.dirname(os.path.abspath(__file__))
             schema_path = os.path.join(base_dir, 'config_schema.yaml')
@@ -79,8 +112,12 @@ class ConfigManager:
             schema = yaml.safe_load(file)
         return schema
 
+
     def load_default_config(self):
-        """Load default configuration values from the schema."""
+        """
+        Load default configuration values from the schema.
+        Extracts 'value' fields from schema for each setting.
+        """
         def extract_value(item):
             if isinstance(item, dict):
                 if 'value' in item:
@@ -94,8 +131,12 @@ class ConfigManager:
             config[category] = extract_value(settings)
         return config
 
+
     def load_user_config(self, config_path=os.path.join('src', 'config.yaml')):
-        """Load user configuration and merge with default config."""
+        """
+        Load user configuration and merge with default config.
+        Reads config.yaml and updates default config with user values.
+        """
         def deep_update(source, overrides):
             for key, value in overrides.items():
                 if isinstance(value, dict) and key in source:
@@ -111,32 +152,46 @@ class ConfigManager:
             except yaml.YAMLError:
                 print("Error in configuration file. Using default configuration.")
 
+
     @classmethod
     def save_config(cls, config_path=os.path.join('src', 'config.yaml')):
-        """Save the current configuration to a YAML file."""
+        """
+        Save the current configuration to a YAML file.
+        Writes the config to config.yaml for persistence.
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
         with open(config_path, 'w') as file:
             yaml.dump(cls._instance.config, file, default_flow_style=False)
 
+
     @classmethod
     def reload_config(cls):
         """
         Reload the configuration from the file.
+        Re-reads config.yaml and updates the config in memory.
         """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
         cls._instance.config = cls._instance.load_default_config()
         cls._instance.load_user_config()
 
+
     @classmethod
     def config_file_exists(cls):
-        """Check if a valid config file exists."""
+        """
+        Check if a valid config file exists.
+        Returns True if config.yaml exists in src/.
+        """
         config_path = os.path.join('src', 'config.yaml')
         return os.path.isfile(config_path)
 
+
     @classmethod
     def console_print(cls, message):
-        """Print a message to the console if enabled in the configuration."""
+        """
+        Print a message to the console if enabled in the configuration.
+        Only prints if 'print_to_terminal' is True in config.
+        """
         if cls._instance and cls._instance.config['misc']['print_to_terminal']:
             print(message)
