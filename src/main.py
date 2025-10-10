@@ -35,6 +35,15 @@ class WhisperWriterApp(QObject):
         super().__init__()
         # Create the Qt application object
         self.app = QApplication(sys.argv)
+        # Initialize attributes to safe defaults so cleanup can run even if
+        # initialization is interrupted or settings window is shown first.
+        self.key_listener = None
+        self.input_simulator = None
+        self.local_model = None
+        self.result_thread = None
+        self.main_window = None
+        self.status_window = None
+        self.tray_icon = None
         # Set the window icon (shown in taskbar and tray)
         self.app.setWindowIcon(QIcon(os.path.join('assets', 'ww-logo.png')))
 
@@ -127,10 +136,21 @@ class WhisperWriterApp(QObject):
         Clean up resources before exiting or restarting the app.
         Stops the key listener and cleans up the input simulator.
         """
-        if self.key_listener:
-            self.key_listener.stop()
-        if self.input_simulator:
-            self.input_simulator.cleanup()
+        # Use getattr to safely access attributes that may not have been set.
+        key_listener = getattr(self, 'key_listener', None)
+        if key_listener:
+            try:
+                key_listener.stop()
+            except Exception:
+                # Don't allow cleanup failures to prevent app shutdown/restart
+                pass
+
+        input_simulator = getattr(self, 'input_simulator', None)
+        if input_simulator:
+            try:
+                input_simulator.cleanup()
+            except Exception:
+                pass
 
 
     def exit_app(self):
