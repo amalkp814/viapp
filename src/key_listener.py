@@ -1,8 +1,10 @@
 
+from __future__ import annotations
+
 # Standard library imports
 from abc import ABC, abstractmethod  # For abstract base classes
 from enum import Enum, auto  # For creating enumerations
-from typing import Callable, Set  # For type hints
+from typing import Callable, Set, List, Optional, Tuple  # For type hints
 
 # Local module import
 from utils import ConfigManager  # For configuration management

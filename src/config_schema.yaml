@@ -17,7 +17,7 @@ model_options:
   # Common configuration options for both API and local models
   common:
     language:
-      value: null
+      value: en
       type: str
       description: "The language code for the transcription in ISO-639-1 format."
     temperature:
@@ -47,7 +47,7 @@ model_options:
   # Configuration options for the faster-whisper model
   local:
     model:
-      value: base
+      value: base.en
       type: str
       description: "The model to use for transcription. The larger models provide better accuracy but are slower."
       options:
@@ -72,7 +72,7 @@ model_options:
         - cuda
         - cpu
     compute_type:
-      value: default
+      value: float32
       type: str
       description: "The compute type to use for the local Whisper model."
       options:
@@ -81,11 +81,11 @@ model_options:
         - float16
         - int8
     condition_on_previous_text:
-      value: true
+      value: false
       type: bool
       description: "Set to true to use the previously transcribed text as a prompt for the next transcription request."
     vad_filter:
-      value: false
+      value: true
       type: bool
       description: "Set to true to use a voice activity detection (VAD) filter to remove silence from the recording."
     model_path:
@@ -99,7 +99,7 @@ model_options:
 # Settings for hotkey activation and audio recording
 recording_options:
   activation_key:
-    value: ctrl+shift+space
+    value: f9
     type: str
     description: "The keyboard shortcut to activate the recording and transcribing process. Separate keys with a '+'."
   input_backend:
@@ -131,6 +131,34 @@ recording_options:
     value: 900
     type: int
     description: "The duration in milliseconds to wait for silence before stopping the recording."
+  min_silence_ms:
+    value: 800
+    type: int
+    description: "Minimum silence (ms) required to stop recording when speech has been detected. Higher values reduce premature chopping."
+  max_recording_duration_ms:
+    value: 15000
+    type: int
+    description: "Maximum recording duration in milliseconds before automatically stopping (safety cap)."
+  noise_threshold_norm:
+    value: 0.02
+    type: float
+    description: "Normalized RMS threshold (0.0-1.0) below which a recording is considered noise and discarded. Device-independent."
+  energy_speech_threshold_norm:
+    value: null
+    type: float
+    description: "Optional normalized energy threshold to consider a frame as speech (overrides automatic derivation)."
+  vad_aggressiveness:
+    value: 2
+    type: int
+    description: "webrtcvad aggressiveness level (0-3). Higher values are more aggressive about classifying non-speech."
+  consecutive_speech_frames:
+    value: 2
+    type: int
+    description: "Number of consecutive speech frames required to mark speech started (helps ignore blips)."
+  rms_ema_alpha:
+    value: 0.4
+    type: float
+    description: "Exponential moving average alpha for per-frame RMS smoothing (0.0-1.0). Lower = heavier smoothing."
   min_duration:
     value: 100
     type: int

@@ -1,4 +1,4 @@
-
+ 
 # =============================
 # base_window.py (with comments)
 # =============================
@@ -44,7 +44,8 @@ class BaseWindow(QMainWindow):
         - Custom title bar with app name and close button
         """
         self.setWindowTitle(title)
-        self.setWindowFlags(Qt.FramelessWindowHint)  # Remove default window borders
+        # Frameless and always-on-top
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)  # Allow transparency
         self.setFixedSize(width, height)
 
@@ -58,10 +59,10 @@ class BaseWindow(QMainWindow):
         title_bar_layout.setContentsMargins(0, 0, 0, 0)
 
         # Title label (shows app name)
-        title_label = QLabel('WhisperWriter')  # TODO: Update to 'viapp' if needed
+        title_label = QLabel('WhisperWriter')
         title_label.setFont(QFont('Segoe UI', 12, QFont.Bold))
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("color: #404040;")
+        title_label.setStyleSheet("color: #2b2b2b;")
 
         # Close button (top right)
         close_button_widget = QWidget()
@@ -140,6 +141,15 @@ class BaseWindow(QMainWindow):
         path.addRoundedRect(QRectF(self.rect()), 20, 20)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(QBrush(QColor(255, 255, 255, 220)))
+        # Draw a subtle shadow by painting a slightly larger translucent rounded rect behind
+        shadow_path = QPainterPath()
+        shadow_path.addRoundedRect(QRectF(self.rect()).adjusted(2, 4, -2, -2), 22, 22)
+        painter.setBrush(QBrush(QColor(0, 0, 0, 30)))
+        painter.setPen(Qt.NoPen)
+        painter.drawPath(shadow_path)
+
+        # Use a semi-transparent brush so the window background is visible but translucent
+        # Alpha 230/255 gives a light translucency
+        painter.setBrush(QBrush(QColor(255, 255, 255, 230)))
         painter.setPen(Qt.NoPen)
         painter.drawPath(path)

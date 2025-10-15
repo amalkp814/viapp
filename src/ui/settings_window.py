@@ -1,4 +1,4 @@
-
+ 
 # =============================
 # settings_window.py (with comments)
 # =============================
@@ -22,7 +22,8 @@ import sys
 from dotenv import set_key, load_dotenv
 from PyQt5.QtWidgets import (
     QApplication, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QCheckBox,
-    QMessageBox, QTabWidget, QWidget, QSizePolicy, QSpacerItem, QToolButton, QStyle, QFileDialog
+    QMessageBox, QTabWidget, QWidget, QSizePolicy, QSpacerItem, QToolButton, QStyle, QFileDialog,
+    QSpinBox, QDoubleSpinBox
 )
 from PyQt5.QtCore import Qt, QCoreApplication, QProcess, pyqtSignal
 
@@ -38,6 +39,8 @@ class SettingsWindow(BaseWindow):
     # Signals to notify when settings are closed or saved
     settings_closed = pyqtSignal()
     settings_saved = pyqtSignal()
+    # Emitted when settings are saved and applied without restarting the app
+    settings_applied = pyqtSignal()
 
     def __init__(self):
         """
@@ -163,8 +166,10 @@ class SettingsWindow(BaseWindow):
             return self.create_combobox(current_value, meta['options'])
         elif meta_type == 'str':
             return self.create_line_edit(current_value, key)
-        elif meta_type in ['int', 'float']:
-            return self.create_line_edit(str(current_value))
+        elif meta_type == 'int':
+            return self.create_int_spinbox(current_value)
+        elif meta_type == 'float':
+            return self.create_float_spinbox(current_value)
         return None
 
     def create_checkbox(self, value, key):
@@ -207,7 +212,31 @@ class SettingsWindow(BaseWindow):
             container = QWidget()
             container.setLayout(layout)
             return container
+        # Special UX for activation hotkey: hint about format and a compact placeholder
+        if key == 'activation_key':
+            widget.setPlaceholderText('e.g. f9 or ctrl+shift+space')
+            widget.setToolTip('Enter a single key (f1..f12) or modifier combo like ctrl+shift+space')
         return widget
+
+    def create_int_spinbox(self, value):
+        box = QSpinBox()
+        try:
+            box.setRange(0, 60000)
+            box.setValue(int(value) if value is not None else 0)
+        except Exception:
+            box.setValue(0)
+        return box
+
+    def create_float_spinbox(self, value):
+        box = QDoubleSpinBox()
+        try:
+            box.setDecimals(3)
+            box.setRange(0.0, 1.0)
+            box.setSingleStep(0.01)
+            box.setValue(float(value) if value is not None else 0.0)
+        except Exception:
+            box.setValue(0.0)
+        return box
 
     def create_help_button(self, description):
         """
@@ -244,6 +273,39 @@ class SettingsWindow(BaseWindow):
         """
         QMessageBox.information(self, 'Description', description)
 
+    def validate_activation_key(self, key_str: str) -> bool:
+        """
+        Very small heuristic validator for activation_key strings.
+        Accepts:
+         - f1..f24
+         - single keys like 'a', 'enter', 'space'
+         - modifier combos like 'ctrl+shift+space'
+        """
+        if not key_str:
+            return False
+        parts = [p.strip().lower() for p in key_str.split('+') if p.strip()]
+        if not parts:
+            return False
+        # allow function keys
+        if len(parts) == 1 and parts[0].startswith('f') and parts[0][1:].isdigit():
+            num = int(parts[0][1:])
+            return 1 <= num <= 24
+        # allow modifier combos — check last part is non-empty
+        mods = {'ctrl', 'shift', 'alt', 'meta'}
+        if len(parts) >= 2:
+            # all but last should be modifiers
+            for p in parts[:-1]:
+                if p not in mods:
+                    return False
+            # last can be any reasonable key (letter, number, space, enter or f-key)
+            last = parts[-1]
+            if last == 'space' or last == 'enter' or last.isalpha() or last.isdigit() or (last.startswith('f') and last[1:].isdigit()):
+                return True
+        # fallback: allow single letters/numbers
+        if len(parts) == 1 and (parts[0].isalpha() or parts[0].isdigit()):
+            return True
+        return False
+
     def save_settings(self):
         """
         Save all settings to config.yaml and .env file.
@@ -251,6 +313,15 @@ class SettingsWindow(BaseWindow):
         - API key is saved securely to .env
         - Shows confirmation dialog and restarts app
         """
+        # Validate activation_key before saving
+        activation_widget = self.findChild(QWidget, 'recording_options_activation_key_input')
+        if activation_widget and hasattr(activation_widget, 'text'):
+            candidate = activation_widget.text().strip()
+            if candidate:
+                if not self.validate_activation_key(candidate):
+                    QMessageBox.warning(self, 'Invalid Shortcut', 'Activation key format is not supported. Use a function key (e.g. f9) or modifiers like ctrl+shift+space.')
+                    return
+
         self.iterate_settings(self.save_setting)
 
         # Save the API key to the .env file
@@ -262,9 +333,26 @@ class SettingsWindow(BaseWindow):
         ConfigManager.set_config_value(None, 'model_options', 'api', 'api_key')
 
         ConfigManager.save_config()
-        QMessageBox.information(self, 'Settings Saved', 'Settings have been saved. The application will now restart.')
-        self.settings_saved.emit()
-        self.close()
+
+        # After saving, offer the user a choice to apply settings without restarting
+        resp = QMessageBox.question(
+            self,
+            'Settings Saved',
+            'Settings have been saved. Do you want to apply them now without restarting? (Yes = apply now, No = restart app)',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes
+        )
+
+        if resp == QMessageBox.Yes:
+            # Apply without restart
+            QMessageBox.information(self, 'Settings Applied', 'Settings applied. Some changes (like API keys) may require a restart.')
+            self.settings_applied.emit()
+            self.close()
+        else:
+            # Fall back to the previous behavior: ask to restart to apply all changes
+            QMessageBox.information(self, 'Restart Required', 'The application will now restart to apply all changes.')
+            self.settings_saved.emit()
+            self.close()
 
     def save_setting(self, widget, category, sub_category, key, meta):
         """
@@ -310,6 +398,16 @@ class SettingsWindow(BaseWindow):
             widget.setCurrentText(value)
         elif isinstance(widget, QLineEdit):
             widget.setText(str(value) if value is not None else '')
+        elif isinstance(widget, QSpinBox):
+            try:
+                widget.setValue(int(value) if value is not None else 0)
+            except Exception:
+                pass
+        elif isinstance(widget, QDoubleSpinBox):
+            try:
+                widget.setValue(float(value) if value is not None else 0.0)
+            except Exception:
+                pass
         elif isinstance(widget, QWidget) and widget.layout():
             # This is for the model_path widget
             line_edit = widget.layout().itemAt(0).widget()
@@ -326,6 +424,9 @@ class SettingsWindow(BaseWindow):
             return widget.currentText() or None
         elif isinstance(widget, QLineEdit):
             text = widget.text()
+            # Treat explicit 'None'/'null' strings as None (case-insensitive)
+            if isinstance(text, str) and text.strip().lower() in ('none', 'null'):
+                return None
             if value_type == 'int':
                 return int(text) if text else None
             elif value_type == 'float':
@@ -337,6 +438,10 @@ class SettingsWindow(BaseWindow):
             line_edit = widget.layout().itemAt(0).widget()
             if isinstance(line_edit, QLineEdit):
                 return line_edit.text() or None
+        elif isinstance(widget, QSpinBox):
+            return int(widget.value())
+        elif isinstance(widget, QDoubleSpinBox):
+            return float(widget.value())
         return None
 
     def toggle_api_local_options(self, use_api):
