@@ -59,8 +59,8 @@ class BaseWindow(QMainWindow):
         title_bar_layout.setContentsMargins(0, 0, 0, 0)
 
         # Title label (shows app name)
-        title_label = QLabel('WhisperWriter')
-        title_label.setFont(QFont('Segoe UI', 12, QFont.Bold))
+        title_label = QLabel('viapp')
+        title_label.setFont(QFont('Arial', 12, QFont.Bold))
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("color: #2b2b2b;")
 
@@ -150,6 +150,6 @@ class BaseWindow(QMainWindow):
 
         # Use a semi-transparent brush so the window background is visible but translucent
         # Alpha 230/255 gives a light translucency
-        painter.setBrush(QBrush(QColor(255, 255, 255, 230)))
+        painter.setBrush(QBrush(QColor(240, 240, 240, 230)))
         painter.setPen(Qt.NoPen)
         painter.drawPath(path)
