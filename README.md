@@ -1,33 +1,27 @@
 
-# <img src="./assets/ww-logo.png" alt="viapp icon" width="25" height="25"> viapp
-
+# viapp
 
 ![version](https://img.shields.io/badge/version-1.0.1-blue)
 
-<p align="center">
-    <img src="./assets/ww-demo-image-02.gif" alt="WhisperWriter demo gif" width="340" height="136">
-</p>
+![demo](./assets/ww-demo-image-02.gif)
 
+**Update (2024-05-28):** Major rewrite merged! We've migrated from using `tkinter` to `PyQt5` for the UI, added a new settings window for configuration, a continuous recording mode, and support for local APIs. If you encounter any problems, please [open an issue](https://github.com/amalkp814/viapp/issues).
 
-**Update (2024-05-28):** Major rewrite merged! We've migrated from using `tkinter` to using `PyQt5` for the UI, added a new settings window for configuration, a new continuous recording mode, support for a local API, and more! Please be patient as I work out any bugs that may have been introduced in the process. If you encounter any problems, please [open a new issue](https://github.com/amalkp814/viapp/issues)!
+viapp is a small speech-to-text app that uses [OpenAI's Whisper model](https://openai.com/research/whisper) to auto-transcribe recordings from your microphone to the active window.
 
+When running, the app waits for a keyboard shortcut (default `ctrl+shift+space`). Press it to start recording. Recording modes:
 
-viapp is a small speech-to-text app that uses [OpenAI's Whisper model](https://openai.com/research/whisper) to auto-transcribe recordings from a user's microphone to the active window.
+- `continuous` (default): stop after a pause, transcribe, then restart until stopped.
 
-Once started, the script runs in the background and waits for a keyboard shortcut to be pressed (`ctrl+shift+space` by default). When the shortcut is pressed, the app starts recording from your microphone. There are four recording modes to choose from:
-- `continuous` (default): Recording will stop after a long enough pause in your speech. The app will transcribe the text and then start recording again. To stop listening, press the keyboard shortcut again.
-- `voice_activity_detection`: Recording will stop after a long enough pause in your speech. Recording will not start until the keyboard shortcut is pressed again.
-- `press_to_toggle` Recording will stop when the keyboard shortcut is pressed again. Recording will not start until the keyboard shortcut is pressed again.
-- `hold_to_record` Recording will continue until the keyboard shortcut is released. Recording will not start until the keyboard shortcut is held down again.
+- `voice_activity_detection`: record while speech is detected; stop after a pause.
 
+- `press_to_toggle`: toggle recording with the activation key.
 
-You can change the keyboard shortcut (`activation_key`) and recording mode in the [Configuration Options](#configuration-options). While recording and transcribing, a small status window is displayed that shows the current stage of the process (but this can be turned off). Once the transcription is complete, the transcribed text will be automatically written to the active window.
+- `hold_to_record`: record while holding the activation key.
 
+You can change the keyboard shortcut (`activation_key`) and recording mode in Configuration Options below. While recording, a small status area shows the current stage (can be hidden). When transcription completes, the text is typed to the active window.
 
-The transcription can either be done locally through the [faster-whisper Python package](https://github.com/SYSTRAN/faster-whisper/) or through a request to [OpenAI's API](https://platform.openai.com/docs/guides/speech-to-text). By default, the app will use a local model, but you can change this in the [Configuration Options](#configuration-options). If you choose to use the API, you will need to either provide your OpenAI API key or change the base URL endpoint.
-
-
-**Fun fact:** Almost the entirety of the initial release of the project was pair-programmed with [ChatGPT-4](https://openai.com/product/gpt-4) and [GitHub Copilot](https://github.com/features/copilot) using VS Code. Practically every line, including most of this README, was written by AI. After the initial prototype was finished, viapp was used to write a lot of the prompts as well!
+Transcription can be local (`faster-whisper`) or via OpenAI's API. By default the app uses a local model; provide an API key or change base URL to use an API-based backend.
 
 ## Getting Started
 
@@ -42,50 +36,37 @@ If you want to run `faster-whisper` on your GPU, you'll also need to install the
 - [cuBLAS for CUDA 12](https://developer.nvidia.com/cublas)
 - [cuDNN 8 for CUDA 12](https://developer.nvidia.com/cudnn)
 
-<details>
-<summary>More information on GPU execution</summary>
+### More information on GPU execution
 
-The below was taken directly from the [`faster-whisper` README](https://github.com/SYSTRAN/faster-whisper?tab=readme-ov-file#gpu):
+The following notes are taken from the `faster-whisper` README:
 
-**Note:** The latest versions of `ctranslate2` support CUDA 12 only. For CUDA 11, the current workaround is downgrading to the `3.24.0` version of `ctranslate2` (This can be done with `pip install --force-reinsall ctranslate2==3.24.0`).
+- Note: the latest versions of `ctranslate2` target CUDA 12. For CUDA 11 you may need to pin to an older `ctranslate2` release.
 
-There are multiple ways to install the NVIDIA libraries mentioned above. The recommended way is described in the official NVIDIA documentation, but we also suggest other installation methods below.
+- Use Docker images such as `nvidia/cuda:12.0.0-runtime-ubuntu20.04` or `nvidia/cuda:12.0.0-runtime-ubuntu22.04` which include the required libraries.
 
-#### Use Docker
-
-The libraries (cuBLAS, cuDNN) are installed in these official NVIDIA CUDA Docker images: `nvidia/cuda:12.0.0-runtime-ubuntu20.04` or `nvidia/cuda:12.0.0-runtime-ubuntu22.04`.
-
-#### Install with `pip` (Linux only)
-
-On Linux these libraries can be installed with `pip`. Note that `LD_LIBRARY_PATH` must be set before launching Python.
+- On Linux you can install Python wrappers via pip and set `LD_LIBRARY_PATH` accordingly. Example:
 
 ```bash
 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
 
-export LD_LIBRARY_PATH=`python3 -c 'import os; import nvidia.cublas.lib; import nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))'`
+export LD_LIBRARY_PATH="$(python3 -c 'import os, nvidia.cublas.lib as cb, nvidia.cudnn.lib as cd; print(os.path.dirname(cb.__file__) + ":" + os.path.dirname(cd.__file__))')"
 ```
 
-**Note**: Version 9+ of `nvidia-cudnn-cu12` appears to cause issues due its reliance on cuDNN 9 (Faster-Whisper does not currently support cuDNN 9). Ensure your version of the Python package is for cuDNN 8.
-
-#### Download the libraries from Purfview's repository (Windows & Linux)
-
-Purfview's [whisper-standalone-win](https://github.com/Purfview/whisper-standalone-win) provides the required NVIDIA libraries for Windows & Linux in a [single archive](https://github.com/Purfview/whisper-standalone-win/releases/tag/libs). Decompress the archive and place the libraries in a directory included in the `PATH`.
-
-</details>
+Ensure you pick package versions compatible with your CUDA/cuDNN stack.
 
 ### Installation
 To set up and run the project, follow these steps:
 
-#### 1. Clone the repository:
+#### 1. Clone the repository
 
 ```bash
 git clone https://github.com/amalkp814/viapp
 cd viapp
-```
+```bash
 
-#### 2. Create a virtual environment and activate it:
+#### 2. Create a virtual environment and activate it
 
-```
+```bash
 python -m venv venv
 
 # For Linux and macOS:
@@ -93,25 +74,25 @@ source venv/bin/activate
 
 # For Windows:
 venv\Scripts\activate
-```
+```bash
 
-#### 3. Install the required packages:
+#### 3. Install the required packages
 
 ```bash
 # Install all required Python packages listed in requirements.txt
 # Run this command inside your virtual environment (see previous step).
 # This ensures your project has all the dependencies it needs to run.
 pip install -r requirements.txt
-```
+```bash
 
-#### 4. Run the Python code:
+#### 4. Run the Python code
 
-```
+```bash
 python run.py
 ```
 
 
-#### 5. Configure and start viapp:
+#### 5. Configure and start viapp
 On first run, a Settings window should appear. Once configured and saved, another window will open. Press "Start" to activate the keyboard listener. Press the activation key (`ctrl+shift+space` by default) to start recording and transcribing to the active window.
 
 ### Configuration Options
@@ -119,16 +100,19 @@ On first run, a Settings window should appear. Once configured and saved, anothe
 
 viapp uses a configuration file to customize its behaviour. To set up the configuration, open the Settings window:
 
-<p align="center">
-    <img src="./assets/ww-settings-demo.gif" alt="WhisperWriter Settings window demo gif" width="350" height="350">
-</p>
+![settings demo](./assets/ww-settings-demo.gif)
 
 #### Model Options
+
 - `use_api`: Toggle to choose whether to use the OpenAI API or a local Whisper model for transcription. (Default: `false`)
+
 - `common`: Options common to both API and local models.
+
   - `language`: The language code for the transcription in [ISO-639-1 format](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes). (Default: `null`)
+
   - `temperature`: Controls the randomness of the transcription output. Lower values make the output more focused and deterministic. (Default: `0.0`)
-  - `initial_prompt`: A string used as an initial prompt to condition the transcription. More info: [OpenAI Prompting Guide](https://platform.openai.com/docs/guides/speech-to-text/prompting). (Default: `null`)
+
+  - `initial_prompt`: A string used as an initial prompt to condition the transcription. (Default: `null`)
 
 - `api`: Configuration options for the OpenAI API. See the [OpenAI API documentation](https://platform.openai.com/docs/api-reference/audio/create?lang=python) for more information.
   - `model`: The model to use for transcription. Currently, only `whisper-1` is available. (Default: `whisper-1`)
@@ -151,6 +135,8 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 - `sample_rate`: The sample rate in Hz to use for recording. (Default: `16000`)
 - `silence_duration`: The duration in milliseconds to wait for silence before stopping the recording. (Default: `900`)
 - `min_duration`: The minimum duration in milliseconds for a recording to be processed. Recordings shorter than this will be discarded. (Default: `100`)
+- `max_recording_duration_ms`: Maximum recording duration in milliseconds. Recording will stop automatically after this duration (default: 15000)
+- `noise_threshold_norm`: Normalized energy threshold (0.0 - 1.0) used to detect noise-only recordings. Default: 0.02
 
 #### Post-processing Options
 - `writing_key_press_delay`: The delay in seconds between each key press when writing the transcribed text. (Default: `0.005`)
@@ -188,54 +174,20 @@ Implemented features can be found in the [CHANGELOG](CHANGELOG.md).
 
 ## Contributing
 
-
-
-Contributions are welcome! I created this project for my own personal use and didn't expect it to get much attention, so I haven't put much effort into testing or making it easy for others to contribute. If you have ideas or suggestions, feel free to [open a pull request](https://github.com/amalkp814/viapp/pulls) or [create a new issue](https://github.com/amalkp814/viapp/issues/new). I'll do my best to review and respond as time allows.
+Contributions are welcome. Please open a pull request or create an issue on GitHub.
 
 ## Forking and Renaming viapp
 
-If you want to create your own version of viapp, you can fork and rename the project. This is useful if you want to customize the app for your own needs or contribute under a different name.
+To fork and rename the project:
 
-### How to Fork and Rename
-
-1. **Fork the repository on GitHub:**
-  - Go to [viapp on GitHub](https://github.com/amalkp814/viapp).
-  - Click the "Fork" button at the top right to create your own copy.
-
-2. **Clone your fork locally:**
-  - Replace `<your-username>` with your GitHub username:
-    ```bash
-    git clone https://github.com/<your-username>/viapp.git
-    cd viapp
-    ```
-
-3. **Rename the project:**
-  - Change the folder name and all references in files (README.md, LICENSE, etc.) from `viapp` to your new project name.
-  - Update the project icon and assets if desired.
-
-4. **Update metadata:**
-  - Edit `README.md` to reflect your new project name, description, and links.
-  - Update the `CHANGELOG.md` to note the fork and renaming.
-  - Change the GitHub repository description and settings as needed.
-
-5. **Push your changes:**
-  - Commit your updates and push to your fork:
-    ```bash
-    git add .
-    git commit -m "Renamed project to <new-name> and updated metadata"
-    git push
-    ```
-
-6. **(Optional) Publish your fork:**
-  - Make your repository public and share your new project link.
-
-**Tip:** If you contribute back, please open a pull request to the original [viapp](https://github.com/amalkp814/viapp) repository!
+1. Fork the repository on GitHub: [viapp](https://github.com/amalkp814/viapp)
+2. Clone your fork locally and update references and metadata.
+3. Rename files and update README/CHANGELOG as needed, then push to your fork.
 
 ## Credits
 
-- [OpenAI](https://openai.com/) for creating the Whisper model and providing the API. Plus [ChatGPT](https://chat.openai.com/), which was used to write a lot of the initial code for this project.
-- [Guillaume Klein](https://github.com/guillaumekln) for creating the [faster-whisper Python package](https://github.com/SYSTRAN/faster-whisper).
-- All of our [contributors](https://github.com/savbell/whisper-writer/graphs/contributors)!
+- [OpenAI](https://openai.com/) for the Whisper model and ChatGPT.
+- [Guillaume Klein](https://github.com/guillaumekln) for the `faster-whisper` project.
 
 ## License
 

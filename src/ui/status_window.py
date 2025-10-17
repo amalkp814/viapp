@@ -1,4 +1,4 @@
-
+ 
 # =============================
 # status_window.py (with comments)
 # =============================
@@ -35,7 +35,7 @@ class StatusWindow(BaseWindow):
         Initialize the status window.
         Sets up the UI and connects the status update signal.
         """
-        super().__init__('WhisperWriter Status', 320, 120)  # TODO: Update to 'viapp Status' if needed
+        super().__init__('viapp Status', 320, 120)
         self.initStatusUI()
         self.statusSignal.connect(self.updateStatus)
 

@@ -4,6 +4,9 @@ import subprocess  # For running external commands and processes
 import os  # For interacting with the operating system
 import signal  # For sending signals to processes
 import time  # For delays between keystrokes
+import sys
+import ctypes
+from ctypes import wintypes
 
 # Third-party library import
 from pynput.keyboard import Controller as PynputController  # For simulating keyboard input
@@ -47,6 +50,10 @@ class InputSimulator:
         elif self.input_method == 'dotool':
             self._initialize_dotool()  # Start dotool process
 
+        # Windows-specific: cache current process id for window filtering
+        if sys.platform == 'win32':
+            self._pid = os.getpid()
+
 
     def _initialize_dotool(self):
         """
@@ -75,6 +82,14 @@ class InputSimulator:
             text (str): The text to type.
         """
         interval = ConfigManager.get_config_value('post_processing', 'writing_key_press_delay')
+        # On Windows, try to ensure another top-level window (not our app) has focus
+        if sys.platform == 'win32':
+            try:
+                self._ensure_target_foreground()
+            except Exception:
+                # Best-effort: if focusing fails, continue to type anyway
+                pass
+
         # Choose typing method based on config
         if self.input_method == 'pynput':
             self._typewrite_pynput(text, interval)
@@ -82,6 +97,57 @@ class InputSimulator:
             self._typewrite_ydotool(text, interval)
         elif self.input_method == 'dotool':
             self._typewrite_dotool(text, interval)
+
+    # ---------------- Windows focus helpers ----------------
+    def _ensure_target_foreground(self):
+        """
+        Attempt to set a top-level visible window (not belonging to this process)
+        as the foreground window so subsequent keystrokes go to the active app.
+        """
+        if sys.platform != 'win32':
+            return
+
+        user32 = ctypes.windll.user32
+
+        # Get the current foreground window; if it belongs to another process, leave it
+        fg = user32.GetForegroundWindow()
+        if fg:
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(fg, ctypes.byref(pid))
+            if pid.value != self._pid:
+                return  # another app already has focus
+
+        # Otherwise enumerate top-level windows and pick the first visible window not in our pid
+        target = None
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def enum_proc(hwnd, lParam):
+            nonlocal target
+            # Check visibility and title
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            length = user32.GetWindowTextLengthW(hwnd)
+            if length == 0:
+                return True
+            # Get process id
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            if pid.value == self._pid:
+                return True
+            # Skip tool windows
+            style = user32.GetWindowLongW(hwnd, -16)  # GWL_STYLE
+            # WS_POPUP etc are allowed; we're just ensuring visible with title
+            target = hwnd
+            return False  # stop enumeration
+
+        user32.EnumWindows(enum_proc, 0)
+
+        if target:
+            # Try to bring the target to foreground
+            try:
+                user32.SetForegroundWindow(target)
+            except Exception:
+                pass
 
 
     def _typewrite_pynput(self, text, interval):

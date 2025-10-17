@@ -18,7 +18,6 @@ from key_listener import KeyListener  # Listens for keyboard shortcuts
 from result_thread import ResultThread  # Handles audio recording and transcription in a thread
 from ui.main_window import MainWindow  # Main application window
 from ui.settings_window import SettingsWindow  # Settings window
-from ui.status_window import StatusWindow  # Status window (shows current state)
 from transcription import create_local_model  # Function to create local transcription model
 from input_simulation import InputSimulator  # Simulates typing the transcribed text
 from utils import ConfigManager  # Manages configuration and settings
@@ -55,6 +54,8 @@ class WhisperWriterApp(QObject):
         # Connect signals for when settings are closed or saved
         self.settings_window.settings_closed.connect(self.on_settings_closed)
         self.settings_window.settings_saved.connect(self.restart_app)
+        # When settings are applied without restart, update runtime components
+        self.settings_window.settings_applied.connect(self.apply_settings)
 
         # If config file exists, initialize main components; otherwise, show settings window
         if ConfigManager.config_file_exists():
@@ -76,6 +77,12 @@ class WhisperWriterApp(QObject):
         self.key_listener = KeyListener()
         self.key_listener.add_callback("on_activate", self.on_activation)
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
+        # Start listening for activation hotkey immediately so app is ready on launch
+        try:
+            self.key_listener.start()
+        except Exception:
+            # Backends may not be available in all environments; continue gracefully
+            pass
 
         # Load model options from config
         model_options = ConfigManager.get_config_section('model_options')
@@ -88,12 +95,22 @@ class WhisperWriterApp(QObject):
         # Create main window (UI)
         self.main_window = MainWindow()
         self.main_window.openSettings.connect(self.settings_window.show)  # Open settings window
-        self.main_window.startListening.connect(self.key_listener.start)  # Start listening for hotkeys
+        # Start button now starts/stops recording only; key listener already started on app init
+        self.main_window.startRecording.connect(self.start_result_thread)
+        # Stop action stops the result thread
+        self.main_window.stopRecording.connect(self.stop_result_thread)
         self.main_window.closeApp.connect(self.exit_app)  # Exit app when requested
+        # Connect stop requests from the main window to stop the active recording/transcription
+        self.main_window.stopRequested.connect(self.stop_result_thread)
 
-        # Create status window if not hidden in config
-        if not ConfigManager.get_config_value('misc', 'hide_status_window'):
-            self.status_window = StatusWindow()
+        # Hide the inline status area in the main window if configured
+        if ConfigManager.get_config_value('misc', 'hide_status_window'):
+            try:
+                # Hide the status widgets inside main_window
+                self.main_window.icon_label.setVisible(False)
+                self.main_window.status_label.setVisible(False)
+            except Exception:
+                pass
 
         # Create system tray icon and menu
         self.create_tray_icon()
@@ -185,6 +202,32 @@ class WhisperWriterApp(QObject):
             )
             self.initialize_components()
 
+    def apply_settings(self):
+        """
+        Apply settings at runtime without restarting.
+        - Reload config
+        - Update key listener activation keys
+        - Update UI flags (like hide_status_window)
+        """
+        # Reload config from disk
+        ConfigManager.reload_config()
+
+        # Update key listener activation keys
+        try:
+            if self.key_listener:
+                self.key_listener.update_activation_keys()
+        except Exception:
+            pass
+
+        # Update status visibility in the main window
+        try:
+            if self.main_window:
+                hide_status = ConfigManager.get_config_value('misc', 'hide_status_window')
+                self.main_window.icon_label.setVisible(not hide_status)
+                self.main_window.status_label.setVisible(not hide_status)
+        except Exception:
+            pass
+
 
     def on_activation(self):
         """
@@ -221,9 +264,10 @@ class WhisperWriterApp(QObject):
             return
 
         self.result_thread = ResultThread(self.local_model)
+        # Connect status updates to the main window's inline status area unless hidden
         if not ConfigManager.get_config_value('misc', 'hide_status_window'):
-            self.result_thread.statusSignal.connect(self.status_window.updateStatus)
-            self.status_window.closeSignal.connect(self.stop_result_thread)
+            self.result_thread.statusSignal.connect(self.main_window.updateStatus)
+            # The main window provides a stopRequested signal which is already connected in initialize_components
         self.result_thread.resultSignal.connect(self.on_transcription_complete)
         self.result_thread.start()
 
@@ -242,8 +286,11 @@ class WhisperWriterApp(QObject):
         When the transcription is complete, type the result and start listening for the activation key again.
         This is called when the result thread emits a result.
         """
-        # Type the transcribed text using input simulator
-        self.input_simulator.typewrite(result)
+        # Type the transcribed text using input simulator, but skip empty/whitespace-only results
+        if result and result.strip():
+            self.input_simulator.typewrite(result)
+        else:
+            ConfigManager.console_print('Transcription empty or noise - not typing any text')
 
         # Play a beep sound if enabled in config
         if ConfigManager.get_config_value('misc', 'noise_on_completion'):
