@@ -1,0 +1,26 @@
+# This file contains the direct dependencies for the viapp project.
+# Indirect dependencies are installed automatically by pip.
+
+# Core application framework
+PyQt5==5.15.10
+
+# Audio recording and playback
+audioplayer==0.6
+sounddevice==0.4.6
+soundfile==0.12.1
+
+# Speech-to-text
+faster-whisper==1.0.2
+openai==1.28.0
+webrtcvad-wheels==2.0.11.post1
+
+# Input simulation and key listening
+pynput==1.7.6
+# evdev is an optional dependency for Linux for the key listener.
+# It is not required on Windows or macOS.
+# To install it on Linux, run: pip install evdev
+
+# Configuration and utilities
+python-dotenv==1.0.0
+PyYAML==6.0.1
+numpy==1.24.3
