@@ -152,6 +152,14 @@ class ConfigManager:
             except yaml.YAMLError:
                 print("Error in configuration file. Using default configuration.")
 
+        # Check for old VAD settings and migrate them
+        if self.config.get('recording_options', {}).get('max_recording_duration_ms') == 15000:
+            self.console_print("Old VAD settings detected. Migrating to new defaults.")
+            self.config['recording_options']['max_recording_duration_ms'] = 30000
+            self.config['recording_options']['min_silence_ms'] = 1000
+            self.config['recording_options']['silence_duration'] = 2000
+            self.save_config(config_path)
+
 
     @classmethod
     def save_config(cls, config_path=os.path.join('src', 'config.yaml')):
