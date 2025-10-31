@@ -47,7 +47,7 @@ model_options:
   # Configuration options for the faster-whisper model
   local:
     model:
-      value: base.en
+      value: small.en
       type: str
       description: "The model to use for transcription. The larger models provide better accuracy but are slower."
       options:
@@ -136,7 +136,7 @@ recording_options:
     type: int
     description: "The duration in milliseconds to wait for silence before stopping the recording."
   min_silence_ms:
-    value: 300
+    value: 700
     type: int
     description: "Minimum silence (ms) required to stop recording when speech has been detected. Higher values reduce premature chopping."
   max_recording_duration_ms:
@@ -152,7 +152,7 @@ recording_options:
     type: float
     description: "Optional normalized energy threshold to consider a frame as speech (overrides automatic derivation)."
   vad_aggressiveness:
-    value: 3
+    value: 2
     type: int
     description: "webrtcvad aggressiveness level (0-3). Higher values are more aggressive about classifying non-speech."
   consecutive_speech_frames:

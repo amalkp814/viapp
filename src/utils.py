@@ -153,11 +153,11 @@ class ConfigManager:
                 print("Error in configuration file. Using default configuration.")
 
         # Check for old VAD settings and migrate them
-        if self.config.get('recording_options', {}).get('min_silence_ms') == 500:
+        if self.config.get('recording_options', {}).get('min_silence_ms') == 300:
             self.console_print("Old VAD settings detected. Migrating to new defaults.")
-            self.config['recording_options']['min_silence_ms'] = 300
-            self.config['recording_options']['vad_aggressiveness'] = 3
-            self.config['recording_options']['energy_speech_threshold_norm'] = 0.01
+            self.config['recording_options']['min_silence_ms'] = 700
+            self.config['recording_options']['vad_aggressiveness'] = 2
+            self.config['model_options']['local']['model'] = 'small.en'
             self.save_config(config_path)
 
 
