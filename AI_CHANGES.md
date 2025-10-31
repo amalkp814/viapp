@@ -6,6 +6,18 @@ Each entry includes date, files modified, and a short description of the change.
 
 ---
 
+2025-10-31 — AI edits
+
+- **Project Refactor**: Simplified the application to its core "voice keyboard" functionality.
+- **Removed Features**: Deleted batch processing (`src/batch_thread.py`) and related UI elements (`src/ui/main_window.py`, `src/main.py`).
+- **Dependencies**: Cleaned up dependencies in `new_requirement.txt` (removed `soundfile`).
+- **Documentation**: Rewrote `README.md` and `CHANGELOG.md` to align with the new, focused scope of the project.
+- **Bug Fixes**:
+    - Downgraded `onnxruntime` to `1.17.0` to fix a DLL loading issue on Windows.
+    - Implemented a configuration migration in `src/utils.py` to automatically update VAD settings for existing users.
+
+---
+
 2025-10-15 — AI edits
 
 - Modified `src/result_thread.py`: improved noise detection (normalized RMS), added per-frame energy fallback, added `max_recording_duration_ms` enforcement and `vad_aggressiveness` config support.

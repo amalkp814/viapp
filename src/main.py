@@ -11,12 +11,11 @@ from pynput.keyboard import Controller  # For simulating keyboard input
 # PyQt5 imports for GUI and threading
 from PyQt5.QtCore import QObject, QProcess  # QObject is base for all Qt objects, QProcess for restarting app
 from PyQt5.QtGui import QIcon  # For window and tray icons
-from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QMessageBox, QFileDialog  # GUI components
+from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QMessageBox  # GUI components
 
 # Local module imports
 from key_listener import KeyListener  # Listens for keyboard shortcuts
 from result_thread import ResultThread  # Handles audio recording and transcription in a thread
-from batch_thread import BatchThread  # Handles batch processing of audio files
 from ui.main_window import MainWindow  # Main application window
 from ui.settings_window import SettingsWindow  # Settings window
 from transcription import create_local_model  # Function to create local transcription model
@@ -41,7 +40,6 @@ class WhisperWriterApp(QObject):
         self.input_simulator = None
         self.local_model = None
         self.result_thread = None
-        self.batch_thread = None
         self.main_window = None
         self.status_window = None
         self.tray_icon = None
@@ -104,7 +102,6 @@ class WhisperWriterApp(QObject):
         self.main_window.closeApp.connect(self.exit_app)  # Exit app when requested
         # Connect stop requests from the main window to stop the active recording/transcription
         self.main_window.stopRequested.connect(self.stop_result_thread)
-        self.main_window.processFile.connect(self.start_batch_thread)
 
         # Hide the inline status area in the main window if configured
         if ConfigManager.get_config_value('misc', 'hide_status_window'):
@@ -169,13 +166,6 @@ class WhisperWriterApp(QObject):
         if input_simulator:
             try:
                 input_simulator.cleanup()
-            except Exception:
-                pass
-
-        batch_thread = getattr(self, 'batch_thread', None)
-        if batch_thread:
-            try:
-                batch_thread.stop()
             except Exception:
                 pass
 
@@ -289,35 +279,6 @@ class WhisperWriterApp(QObject):
         """
         if self.result_thread and self.result_thread.isRunning():
             self.result_thread.stop()
-
-    def start_batch_thread(self):
-        """
-        Start the batch thread to process audio files.
-        Opens a file dialog to select audio files.
-        """
-        if self.batch_thread and self.batch_thread.isRunning():
-            return
-
-        filepaths, _ = QFileDialog.getOpenFileNames(
-            self.main_window,
-            "Select audio files",
-            "",
-            "Audio files (*.wav *.mp3 *.ogg)"
-        )
-
-        if filepaths:
-            self.batch_thread = BatchThread(filepaths, self.local_model)
-            self.batch_thread.statusSignal.connect(self.main_window.updateStatus)
-            self.batch_thread.resultSignal.connect(self.on_transcription_complete)
-            self.batch_thread.start()
-
-    def stop_batch_thread(self):
-        """
-        Stop the batch thread.
-        Calls stop on the thread if it is running.
-        """
-        if self.batch_thread and self.batch_thread.isRunning():
-            self.batch_thread.stop()
 
 
     def on_transcription_complete(self, result):
