@@ -136,7 +136,7 @@ recording_options:
     type: int
     description: "The duration in milliseconds to wait for silence before stopping the recording."
   min_silence_ms:
-    value: 500
+    value: 300
     type: int
     description: "Minimum silence (ms) required to stop recording when speech has been detected. Higher values reduce premature chopping."
   max_recording_duration_ms:
@@ -148,11 +148,11 @@ recording_options:
     type: float
     description: "Normalized RMS threshold (0.0-1.0) below which a recording is considered noise and discarded. Device-independent."
   energy_speech_threshold_norm:
-    value: null
+    value: 0.01
     type: float
     description: "Optional normalized energy threshold to consider a frame as speech (overrides automatic derivation)."
   vad_aggressiveness:
-    value: 2
+    value: 3
     type: int
     description: "webrtcvad aggressiveness level (0-3). Higher values are more aggressive about classifying non-speech."
   consecutive_speech_frames:

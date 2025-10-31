@@ -23,5 +23,5 @@ pynput==1.7.6
 # Configuration and utilities
 python-dotenv==1.0.0
 PyYAML==6.0.1
-numpy
+numpy<2.0
 requests
