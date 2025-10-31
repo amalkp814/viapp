@@ -127,6 +127,10 @@ recording_options:
     value: 16000
     type: int
     description: "The sample rate in Hz to use for recording."
+  frame_duration_ms:
+    value: 30
+    type: int
+    description: "The frame duration in milliseconds for voice activity detection."
   silence_duration:
     value: 900
     type: int

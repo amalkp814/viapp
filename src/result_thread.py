@@ -105,7 +105,7 @@ class ResultThread(QThread):
         recording_options = ConfigManager.get_config_section('recording_options') or {}
         self.sample_rate = int(recording_options.get('sample_rate') or 16000)
 
-        frame_duration_ms = 30
+        frame_duration_ms = int(recording_options.get('frame_duration_ms') or 30)
         frame_size = int(self.sample_rate * (frame_duration_ms / 1000.0))
 
         # Silence thresholds (ms) and convert to frame counts

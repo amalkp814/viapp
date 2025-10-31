@@ -27,6 +27,7 @@ class MainWindow(BaseWindow):
     openSettings = pyqtSignal()    # Emitted when the Settings button is clicked
     startRecording = pyqtSignal()  # Emitted when the Start button is pressed to begin recording
     stopRecording = pyqtSignal()   # Emitted when the Stop action is requested
+    processFile = pyqtSignal()     # Emitted when the Process File button is clicked
     closeApp = pyqtSignal()        # Emitted when the window is closed
     stopRequested = pyqtSignal()   # Emitted when the user presses Stop in the status area
 
@@ -78,11 +79,29 @@ class MainWindow(BaseWindow):
             settings_btn.setText('⚙')
         settings_btn.clicked.connect(self.openSettings.emit)
 
+        # Process File button
+        process_file_btn = QPushButton()
+        process_file_btn.setCursor(Qt.PointingHandCursor)
+        process_file_btn.setFixedSize(36, 36)
+        process_file_btn.setToolTip('Process audio file')
+        process_file_btn.setStyleSheet('''
+            QPushButton { border-radius: 18px; background-color: transparent; }
+            QPushButton:hover { background-color: rgba(0,0,0,0.04); }
+        ''')
+        try:
+            process_file_icon = self.style().standardIcon(self.style().SP_FileIcon)
+            process_file_btn.setIcon(process_file_icon)
+            process_file_btn.setIconSize(process_file_btn.size() * 0.6)
+        except Exception:
+            process_file_btn.setText('F')
+        process_file_btn.clicked.connect(self.processFile.emit)
+
         # Layout: mike on the left, settings on the right
         button_layout = QHBoxLayout()
         button_layout.setContentsMargins(10, 0, 10, 0) # Add horizontal margins
         button_layout.addWidget(self.start_btn)
         button_layout.addStretch(1)
+        button_layout.addWidget(process_file_btn)
         button_layout.addWidget(settings_btn)
 
         self.main_layout.addLayout(button_layout)
