@@ -124,14 +124,11 @@ class viappApp(QObject):
         """
         if self.result_thread and self.result_thread.isRunning():
             recording_mode = ConfigManager.get_config_value('recording_options', 'recording_mode')
-            if recording_mode == 'press_to_toggle':
+            if recording_mode in ('press_to_toggle', 'continuous'):
                 self.result_thread.stop_recording()
                 self.stateChanged.emit('transcribing')
-            elif recording_mode == 'continuous':
-                self.stop_result_thread()
             return
 
-        self.key_listener.stop()
         self.start_result_thread()
         self.stateChanged.emit('recording')
 
@@ -139,7 +136,7 @@ class viappApp(QObject):
         """
         Called when the activation key combination is released.
         """
-        if ConfigManager.get_config_value('recording_options', 'recording_mode') in ('hold_to_record', 'press_to_toggle'):
+        if ConfigManager.get_config_value('recording_options', 'recording_mode') in ('hold_to_record',):
             if self.result_thread and self.result_thread.isRunning():
                 self.result_thread.stop_recording()
                 self.stateChanged.emit('transcribing')
@@ -187,7 +184,6 @@ class viappApp(QObject):
         if ConfigManager.get_config_value('recording_options', 'recording_mode') == 'continuous':
             self.start_result_thread()
         else:
-            self.key_listener.start()
             self.stateChanged.emit('idle')
             self.main_window.update_transcription_label("")
 
