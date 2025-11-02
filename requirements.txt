@@ -6,6 +6,7 @@ webrtcvad-wheels
 soundfile
 faster-whisper
 PyYAML
+pynput
 evdev; sys_platform == 'linux'
 onnxruntime==1.17.0
 requests
