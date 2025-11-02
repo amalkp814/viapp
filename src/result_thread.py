@@ -124,7 +124,7 @@ class ResultThread(QThread):
         recording_mode = recording_options.get('recording_mode') or 'continuous'
         vad = None
         if recording_mode in ('voice_activity_detection', 'continuous'):
-            vad = webrtcvad.Vad(2)  # VAD aggressiveness: 0 to 3, 3 being the most aggressive
+            vad = webrtcvad.Vad(3)  # VAD aggressiveness: 0 to 3, 3 being the most aggressive
             speech_detected = False
             silent_frame_count = 0
 
