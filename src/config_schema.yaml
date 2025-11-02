@@ -1,11 +1,6 @@
 # Configuration options for the Whisper models
 model_options:
-  use_api:
-    value: false
-    type: bool
-    description: "Toggle to choose whether to use the OpenAI API or a local Whisper model for transcription."
-
-  # Common configuration options for both API and local models
+  # Common configuration options for local models
   common:
     language:
       value: null
@@ -19,21 +14,6 @@ model_options:
       value: null
       type: str
       description: "A string used as an initial prompt to condition the transcription. More info: https://platform.openai.com/docs/guides/speech-to-text/prompting"
-
-  # Configuration options for the OpenAI API
-  api:
-    model:
-      value: whisper-1
-      type: str
-      description: "The model to use for transcription. Currently only 'whisper-1' is available."
-    base_url:
-      value: https://api.openai.com/v1
-      type: str
-      description: "The base URL for the API. Can be changed to use a local API endpoint."
-    api_key:
-      value: null
-      type: str
-      description: "Your API key for the OpenAI API. Required for non-local API usage."
 
   # Configuration options for the faster-whisper model
   local:
@@ -157,10 +137,6 @@ misc:
     value: true
     type: bool
     description: "Set to true to print the script status and transcribed text to the terminal."
-  hide_status_window:
-    value: false
-    type: bool
-    description: "Set to true to hide the status window during operation."
   noise_on_completion:
     value: false
     type: bool

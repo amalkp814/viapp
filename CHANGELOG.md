@@ -6,18 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
-- New settings window to configure viapp.
-- New main window to either start the keyboard listener or open the settings window.
-- New continuous recording mode ([Issue #40](https://github.com/savbell/viapp/issues/40)).
-- New option to play a sound when transcription finishes ([Issue #40](https://github.com/savbell/viapp/issues/40)).
+- Redesigned main window with a modern, light theme.
+- Implemented live transcription.
+- Set F9 as the default global shortcut.
+- Added new icons for the application.
 
 ### Changed
-- Migrated status window from using `tkinter` to `PyQt5`.
-- Migrated from using JSON to using YAML to store configuration settings.
-- Upgraded to latest versions of `openai` and `faster-whisper`, including support for local API ([Issue #32](https://github.com/savbell/whisper-writer/issues/32)).
+- Renamed the project from "WhisperWriter" to "viapp".
+- The application now uses the `small.en` model by default.
+- Increased VAD aggressiveness for faster transcriptions.
 
 ### Removed
-- No longer using `keyboard` package to listen for key presses.
+- Removed all API-based transcription functionality.
+- Removed the old status window.
+- Removed the `audioplayer` dependency and related code.
+- Removed the `dotenv` dependency and related code.
 
 ## [1.0.1] - 2024-01-28
 ### Added

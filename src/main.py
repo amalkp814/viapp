@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-from audioplayer import AudioPlayer
 from pynput.keyboard import Controller
 from PyQt5.QtCore import QObject, QProcess
 from PyQt5.QtGui import QIcon
@@ -176,9 +175,6 @@ class viappApp(QObject):
         """
         When the transcription is complete, type the result and start listening for the activation key again.
         """
-        if ConfigManager.get_config_value('misc', 'noise_on_completion'):
-            AudioPlayer(os.path.join('assets', 'beep.wav')).play(block=True)
-
         if ConfigManager.get_config_value('recording_options', 'recording_mode') == 'continuous':
             self.start_result_thread()
         else:

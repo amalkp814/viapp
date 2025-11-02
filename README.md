@@ -6,21 +6,15 @@
     <img src="./assets/viapp-demo-image-02.gif" alt="viapp demo gif" width="340" height="136">
 </p>
 
-**Update (2024-05-28):** I've just merged in a major rewrite of viapp! We've migrated from using `tkinter` to using `PyQt5` for the UI, added a new settings window for configuration, a new continuous recording mode, support for a local API, and more! Please be patient as I work out any bugs that may have been introduced in the process. If you encounter any problems, please [open a new issue](https://github.com/savbell/viapp/issues)!
+viapp is a small speech-to-text app that uses a local, high-performance Whisper model to auto-transcribe recordings from a user's microphone to the active window.
 
-viapp is a small speech-to-text app that uses [OpenAI's Whisper model](https://openai.com/research/whisper) to auto-transcribe recordings from a user's microphone to the active window.
-
-Once started, the script runs in the background and waits for a keyboard shortcut to be pressed (`ctrl+shift+space` by default). When the shortcut is pressed, the app starts recording from your microphone. There are four recording modes to choose from:
+Once started, the script runs in the background and waits for a keyboard shortcut to be pressed (`F9` by default). When the shortcut is pressed, the app starts recording from your microphone. There are four recording modes to choose from:
 - `continuous` (default): Recording will stop after a long enough pause in your speech. The app will transcribe the text and then start recording again. To stop listening, press the keyboard shortcut again.
 - `voice_activity_detection`: Recording will stop after a long enough pause in your speech. Recording will not start until the keyboard shortcut is pressed again.
 - `press_to_toggle` Recording will stop when the keyboard shortcut is pressed again. Recording will not start until the keyboard shortcut is pressed again.
 - `hold_to_record` Recording will continue until the keyboard shortcut is released. Recording will not start until the keyboard shortcut is held down again.
 
-You can change the keyboard shortcut (`activation_key`) and recording mode in the [Configuration Options](#configuration-options). While recording and transcribing, a small status window is displayed that shows the current stage of the process (but this can be turned off). Once the transcription is complete, the transcribed text will be automatically written to the active window.
-
-The transcription can either be done locally through the [faster-whisper Python package](https://github.com/SYSTRAN/faster-whisper/) or through a request to [OpenAI's API](https://platform.openai.com/docs/guides/speech-to-text). By default, the app will use a local model, but you can change this in the [Configuration Options](#configuration-options). If you choose to use the API, you will need to either provide your OpenAI API key or change the base URL endpoint.
-
-**Fun fact:** Almost the entirety of the initial release of the project was pair-programmed with [ChatGPT-4](https://openai.com/product/gpt-4) and [GitHub Copilot](https://github.com/features/copilot) using VS Code. Practically every line, including most of this README, was written by AI. After the initial prototype was finished, viapp was used to write a lot of the prompts as well!
+You can change the keyboard shortcut (`activation_key`) and recording mode in the [Configuration Options](#configuration-options). Once the transcription is complete, the transcribed text will be automatically written to the active window.
 
 ## Getting Started
 
@@ -101,7 +95,7 @@ python run.py
 ```
 
 #### 5. Configure and start viapp:
-On first run, a Settings window should appear. Once configured and saved, another window will open. Press "Start" to activate the keyboard listener. Press the activation key (`ctrl+shift+space` by default) to start recording and transcribing to the active window.
+On first run, a Settings window should appear. Once configured and saved, the main window will open. Press the activation key (`F9` by default) to start recording and transcribing to the active window.
 
 ### Configuration Options
 
@@ -112,19 +106,13 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 </p>
 
 #### Model Options
-- `use_api`: Toggle to choose whether to use the OpenAI API or a local Whisper model for transcription. (Default: `false`)
-- `common`: Options common to both API and local models.
+- `common`: Options common to the local model.
   - `language`: The language code for the transcription in [ISO-639-1 format](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes). (Default: `null`)
   - `temperature`: Controls the randomness of the transcription output. Lower values make the output more focused and deterministic. (Default: `0.0`)
   - `initial_prompt`: A string used as an initial prompt to condition the transcription. More info: [OpenAI Prompting Guide](https://platform.openai.com/docs/guides/speech-to-text/prompting). (Default: `null`)
 
-- `api`: Configuration options for the OpenAI API. See the [OpenAI API documentation](https://platform.openai.com/docs/api-reference/audio/create?lang=python) for more information.
-  - `model`: The model to use for transcription. Currently, only `whisper-1` is available. (Default: `whisper-1`)
-  - `base_url`: The base URL for the API. Can be changed to use a local API endpoint, such as [LocalAI](https://localai.io/). (Default: `https://api.openai.com/v1`)
-  - `api_key`: Your API key for the OpenAI API. Required for non-local API usage. (Default: `null`)
-
 - `local`: Configuration options for the local Whisper model.
-  - `model`: The model to use for transcription. The larger models provide better accuracy but are slower. See [available models and languages](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). (Default: `base`)
+  - `model`: The model to use for transcription. The larger models provide better accuracy but are slower. See [available models and languages](https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages). (Default: `small.en`)
   - `device`: The device to run the local Whisper model on. Use `cuda` for NVIDIA GPUs, `cpu` for CPU-only processing, or `auto` to let the system automatically choose the best available device. (Default: `auto`)
   - `compute_type`: The compute type to use for the local Whisper model. [More information on quantization here](https://opennmt.net/CTranslate2/quantization.html). (Default: `default`)
   - `condition_on_previous_text`: Set to `true` to use the previously transcribed text as a prompt for the next transcription request. (Default: `true`)
@@ -132,7 +120,7 @@ viapp uses a configuration file to customize its behaviour. To set up the config
   - `model_path`: The path to the local Whisper model. If not specified, the default model will be downloaded. (Default: `null`)
 
 #### Recording Options
-- `activation_key`: The keyboard shortcut to activate the recording and transcribing process. Separate keys with a `+`. (Default: `ctrl+shift+space`)
+- `activation_key`: The keyboard shortcut to activate the recording and transcribing process. Separate keys with a `+`. (Default: `F9`)
 - `input_backend`: The input backend to use for detecting key presses. `auto` will try to use the best available backend. (Default: `auto`)
 - `recording_mode`: The recording mode to use. Options include `continuous` (auto-restart recording after pause in speech until activation key is pressed again), `voice_activity_detection` (stop recording after pause in speech), `press_to_toggle` (stop recording when activation key is pressed again), `hold_to_record` (stop recording when activation key is released). (Default: `continuous`)
 - `sound_device`: The numeric index of the sound device to use for recording. To find device numbers, run `python -m sounddevice`. (Default: `null`)
@@ -149,7 +137,6 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 
 #### Miscellaneous Options
 - `print_to_terminal`: Set to `true` to print the script status and transcribed text to the terminal. (Default: `true`)
-- `hide_status_window`: Set to `true` to hide the status window during operation. (Default: `false`)
 - `noise_on_completion`: Set to `true` to play a noise after the transcription has been typed out. (Default: `false`)
 
 If any of the configuration options are invalid or not provided, the program will use the default values.
@@ -160,12 +147,8 @@ You can see all reported issues and their current status in our [Issue Tracker](
 
 ## Roadmap
 Below are features I am planning to add in the near future:
-- [x] Restructuring configuration options to reduce redundancy
-- [x] Update to use the latest version of the OpenAI API
 - [ ] Additional post-processing options:
   - [ ] Simple word replacement (e.g. "gonna" -> "going to" or "smiley face" -> "😊")
-  - [ ] Using GPT for instructional post-processing
-- [x] Updating GUI
 - [ ] Creating standalone executable file
 
 Below are features not currently planned:
@@ -179,7 +162,6 @@ Contributions are welcome! I created this project for my own personal use and di
 
 ## Credits
 
-- [OpenAI](https://openai.com/) for creating the Whisper model and providing the API. Plus [ChatGPT](https://chat.openai.com/), which was used to write a lot of the initial code for this project.
 - [Guillaume Klein](https://github.com/guillaumekln) for creating the [faster-whisper Python package](https://github.com/SYSTRAN/faster-whisper).
 - All of our [contributors](https://github.com/savbell/viapp/graphs/contributors)!
 

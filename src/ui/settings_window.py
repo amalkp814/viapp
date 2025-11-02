@@ -1,6 +1,5 @@
 import os
 import sys
-from dotenv import set_key, load_dotenv
 from PyQt5.QtWidgets import (
     QApplication, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QCheckBox,
     QMessageBox, QTabWidget, QWidget, QSizePolicy, QSpacerItem, QToolButton, QStyle, QFileDialog
@@ -10,8 +9,6 @@ from PyQt5.QtCore import Qt, QCoreApplication, QProcess, pyqtSignal
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui.base_window import BaseWindow
 from utils import ConfigManager
-
-load_dotenv()
 
 class SettingsWindow(BaseWindow):
     settings_closed = pyqtSignal()
@@ -209,16 +206,8 @@ class SettingsWindow(BaseWindow):
         QMessageBox.information(self, 'Description', description)
 
     def save_settings(self):
-        """Save the settings to the config file and .env file."""
+        """Save the settings to the config file."""
         self.iterate_settings(self.save_setting)
-
-        # Save the API key to the .env file
-        api_key = ConfigManager.get_config_value('model_options', 'api', 'api_key') or ''
-        set_key('.env', 'OPENAI_API_KEY', api_key)
-        os.environ['OPENAI_API_KEY'] = api_key
-
-        # Remove the API key from the config
-        ConfigManager.set_config_value(None, 'model_options', 'api', 'api_key')
 
         ConfigManager.save_config()
         QMessageBox.information(self, 'Settings Saved', 'Settings have been saved. The application will now restart.')
