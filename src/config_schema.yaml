@@ -126,10 +126,6 @@ post_processing:
     value: pynput
     type: str
     description: "The method to use for simulating keyboard input."
-    options:
-      - pynput
-      - ydotool
-      - dotool
 
 # Miscellaneous settings
 misc:
