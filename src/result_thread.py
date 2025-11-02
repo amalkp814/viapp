@@ -72,8 +72,6 @@ class ResultThread(QThread):
             self.statusSignal.emit('recording')
             ConfigManager.console_print('Recording...')
 
-            full_transcription = ""
-
             with self._get_audio_stream():
                 for audio_chunk in self._process_audio_queue():
                     if not self.is_running:
@@ -93,11 +91,10 @@ class ResultThread(QThread):
                     if not self.is_running:
                         break
 
-                    full_transcription += result + " "
-                    self.partialResultSignal.emit(full_transcription)
+                    self.partialResultSignal.emit(result)
+                    self.resultSignal.emit(result)
 
             self.statusSignal.emit('idle')
-            self.resultSignal.emit(full_transcription)
 
         except Exception as e:
             traceback.print_exc()
@@ -144,11 +141,6 @@ class ResultThread(QThread):
             try:
                 frame_data = self.audio_queue.get(timeout=1.0)
                 frame = np.frombuffer(frame_data, dtype=np.int16)
-                recording.extend(frame)
-
-                if initial_frames_to_skip > 0:
-                    initial_frames_to_skip -= 1
-                    continue
 
                 is_speech = vad.is_speech(frame.tobytes(), self.sample_rate)
 
@@ -157,7 +149,8 @@ class ResultThread(QThread):
                     if not speech_detected:
                         ConfigManager.console_print("Speech detected.")
                         speech_detected = True
-                else:
+                    recording.extend(frame)
+                elif speech_detected:
                     silent_frame_count += 1
 
                 if speech_detected and silent_frame_count > silence_frames:

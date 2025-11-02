@@ -2,7 +2,7 @@ import os
 import sys
 import time
 from pynput.keyboard import Controller
-from PyQt5.QtCore import QObject, QProcess
+from PyQt5.QtCore import QObject, QProcess, pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QMessageBox
 
@@ -16,6 +16,8 @@ from utils import ConfigManager
 
 
 class viappApp(QObject):
+    stateChanged = pyqtSignal(str)
+
     def __init__(self):
         """
         Initialize the application, opening settings window if no configuration file is found.
@@ -57,6 +59,8 @@ class viappApp(QObject):
         self.main_window.startListening.connect(self.on_activation)
         self.main_window.stopListening.connect(self.on_deactivation)
         self.main_window.closeApp.connect(self.exit_app)
+
+        self.stateChanged.connect(self.main_window.set_state)
 
         self.create_tray_icon()
         self.main_window.show()
@@ -123,11 +127,13 @@ class viappApp(QObject):
             recording_mode = ConfigManager.get_config_value('recording_options', 'recording_mode')
             if recording_mode == 'press_to_toggle':
                 self.result_thread.stop_recording()
+                self.stateChanged.emit('transcribing')
             elif recording_mode == 'continuous':
                 self.stop_result_thread()
             return
 
         self.start_result_thread()
+        self.stateChanged.emit('recording')
 
     def on_deactivation(self):
         """
@@ -136,6 +142,7 @@ class viappApp(QObject):
         if ConfigManager.get_config_value('recording_options', 'recording_mode') in ('hold_to_record', 'press_to_toggle'):
             if self.result_thread and self.result_thread.isRunning():
                 self.result_thread.stop_recording()
+                self.stateChanged.emit('transcribing')
 
     def start_result_thread(self):
         """
@@ -156,30 +163,32 @@ class viappApp(QObject):
         """
         if self.result_thread and self.result_thread.isRunning():
             self.result_thread.stop()
+        self.stateChanged.emit('idle')
+
 
     def on_status_update(self, status):
         """
         Update the main window's state.
         """
-        self.main_window.set_state(status)
+        self.stateChanged.emit(status)
 
     def on_partial_transcription(self, result):
         """
         When a partial transcription is available, update the main window.
         """
         self.main_window.update_transcription_label(result)
-        self.input_simulator.typewrite(result)
-
 
     def on_transcription_complete(self, result):
         """
         When the transcription is complete, type the result and start listening for the activation key again.
         """
+        self.input_simulator.typewrite(result)
+
         if ConfigManager.get_config_value('recording_options', 'recording_mode') == 'continuous':
             self.start_result_thread()
         else:
             self.key_listener.start()
-            self.main_window.set_state('idle')
+            self.stateChanged.emit('idle')
             self.main_window.update_transcription_label("")
 
     def run(self):
