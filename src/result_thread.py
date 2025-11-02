@@ -56,7 +56,7 @@ class ResultThread(QThread):
         self.mutex.lock()
         self.is_running = False
         self.mutex.unlock()
-        self.statusSignal.emit('idle')
+        self.statusSignal.emit("idle")
         self.wait()
 
     def run(self):
@@ -69,16 +69,16 @@ class ResultThread(QThread):
             self.is_recording = True
             self.mutex.unlock()
 
-            self.statusSignal.emit('recording')
-            ConfigManager.console_print('Recording...')
+            self.statusSignal.emit("recording")
+            ConfigManager.console_print("Recording...")
 
             with self._get_audio_stream():
                 for audio_chunk in self._process_audio_queue():
                     if not self.is_running:
                         break
 
-                    self.statusSignal.emit('transcribing')
-                    ConfigManager.console_print('Transcribing...')
+                    self.statusSignal.emit("transcribing")
+                    ConfigManager.console_print("Transcribing...")
 
                     # Time the transcription process
                     start_time = time.time()
@@ -86,7 +86,9 @@ class ResultThread(QThread):
                     end_time = time.time()
 
                     transcription_time = end_time - start_time
-                    ConfigManager.console_print(f'Transcription completed in {transcription_time:.2f} seconds. Post-processed line: {result}')
+                    ConfigManager.console_print(
+                        f"Transcription completed in {transcription_time:.2f} seconds. Post-processed line: {result}"
+                    )
 
                     if not self.is_running:
                         break
@@ -94,12 +96,12 @@ class ResultThread(QThread):
                     self.partialResultSignal.emit(result)
                     self.resultSignal.emit(result)
 
-            self.statusSignal.emit('idle')
+            self.statusSignal.emit("idle")
 
         except Exception as e:
             traceback.print_exc()
-            self.statusSignal.emit('error')
-            self.resultSignal.emit('')
+            self.statusSignal.emit("error")
+            self.resultSignal.emit("")
         finally:
             self.stop_recording()
 
@@ -109,18 +111,20 @@ class ResultThread(QThread):
         self.audio_queue.put(indata.copy())
 
     def _get_audio_stream(self):
-        recording_options = ConfigManager.get_config_section('recording_options')
-        self.sample_rate = recording_options.get('sample_rate') or 16000
+        recording_options = ConfigManager.get_config_section("recording_options")
+        self.sample_rate = recording_options.get("sample_rate") or 16000
         frame_duration_ms = 30
         frame_size = int(self.sample_rate * (frame_duration_ms / 1000.0))
 
-        device = recording_options.get('sound_device')
+        device = recording_options.get("sound_device")
         # Ensure device is an integer if specified, otherwise use default
-        if device is not None and device != '':
+        if device is not None and device != "":
             try:
                 device = int(device)
             except (ValueError, TypeError):
-                ConfigManager.console_print(f"Warning: Invalid 'sound_device' value '{device}' in config. Using default device.")
+                ConfigManager.console_print(
+                    f"Warning: Invalid 'sound_device' value '{device}' in config. Using default device."
+                )
                 device = None
         else:
             device = None
@@ -130,52 +134,66 @@ class ResultThread(QThread):
             return sd.InputStream(
                 samplerate=self.sample_rate,
                 channels=1,
-                dtype='int16',
+                dtype="int16",
                 blocksize=frame_size,
                 device=device,
-                callback=self._audio_callback
+                callback=self._audio_callback,
             )
         except sd.PortAudioError as e:
             ConfigManager.console_print("\n--- Audio Device Error ---")
-            ConfigManager.console_print("Could not open default audio device. This can happen if you don't have a default microphone set in your OS.")
+            ConfigManager.console_print(
+                "Could not open default audio device. This can happen if you don't have a default microphone set in your OS."
+            )
 
             try:
                 devices = sd.query_devices()
-                input_devices = [(i, d) for i, d in enumerate(devices) if d['max_input_channels'] > 0]
+                input_devices = [
+                    (i, d) for i, d in enumerate(devices) if d["max_input_channels"] > 0
+                ]
 
                 if not input_devices:
-                    ConfigManager.console_print("\nFATAL: No audio input devices found on this system.")
+                    ConfigManager.console_print(
+                        "\nFATAL: No audio input devices found on this system."
+                    )
                     ConfigManager.console_print("--------------------------\n")
-                    raise e # Re-raise the original error as there's nothing we can do
+                    raise e  # Re-raise the original error as there's nothing we can do
 
                 # Attempt to use the first available input device as a fallback
                 fallback_device_index, fallback_device_info = input_devices[0]
-                ConfigManager.console_print(f"Attempting to use the first available microphone as a fallback: '{fallback_device_info['name']}' (Index: {fallback_device_index})")
-                ConfigManager.console_print("If this is not the microphone you want to use, please specify the correct 'sound_device' index in your settings.")
+                ConfigManager.console_print(
+                    f"Attempting to use the first available microphone as a fallback: '{fallback_device_info['name']}' (Index: {fallback_device_index})"
+                )
+                ConfigManager.console_print(
+                    "If this is not the microphone you want to use, please specify the correct 'sound_device' index in your settings."
+                )
                 ConfigManager.console_print("--------------------------\n")
 
                 # Second attempt to open the stream with the fallback device
                 return sd.InputStream(
                     samplerate=self.sample_rate,
                     channels=1,
-                    dtype='int16',
+                    dtype="int16",
                     blocksize=frame_size,
                     device=fallback_device_index,
-                    callback=self._audio_callback
+                    callback=self._audio_callback,
                 )
             except Exception as fallback_e:
-                ConfigManager.console_print(f"\nFATAL: The fallback audio device also failed to open: {fallback_e}")
-                ConfigManager.console_print("Please ensure your audio devices are working correctly and are not in use by another application.")
+                ConfigManager.console_print(
+                    f"\nFATAL: The fallback audio device also failed to open: {fallback_e}"
+                )
+                ConfigManager.console_print(
+                    "Please ensure your audio devices are working correctly and are not in use by another application."
+                )
                 ConfigManager.console_print("--------------------------\n")
                 # Re-raise the original error to be caught by the main `run` loop's exception handler
                 raise e
 
     def _process_audio_queue(self):
-        recording_options = ConfigManager.get_config_section('recording_options')
-        self.sample_rate = recording_options.get('sample_rate') or 16000
+        recording_options = ConfigManager.get_config_section("recording_options")
+        self.sample_rate = recording_options.get("sample_rate") or 16000
         frame_duration_ms = 30
         frame_size = int(self.sample_rate * (frame_duration_ms / 1000.0))
-        silence_duration_ms = recording_options.get('silence_duration') or 900
+        silence_duration_ms = recording_options.get("silence_duration") or 900
         silence_frames = int(silence_duration_ms / frame_duration_ms)
         initial_frames_to_skip = int(0.15 * self.sample_rate / frame_size)
 
@@ -203,8 +221,10 @@ class ResultThread(QThread):
                 if speech_detected and silent_frame_count > silence_frames:
                     audio_data = np.array(recording, dtype=np.int16)
                     duration = len(audio_data) / self.sample_rate
-                    ConfigManager.console_print(f'Chunk finished. Size: {audio_data.size} samples, Duration: {duration:.2f} seconds')
-                    min_duration_ms = recording_options.get('min_duration') or 100
+                    ConfigManager.console_print(
+                        f"Chunk finished. Size: {audio_data.size} samples, Duration: {duration:.2f} seconds"
+                    )
+                    min_duration_ms = recording_options.get("min_duration") or 100
                     if (duration * 1000) >= min_duration_ms:
                         yield audio_data
                     recording = []
@@ -215,7 +235,9 @@ class ResultThread(QThread):
         if recording:
             audio_data = np.array(recording, dtype=np.int16)
             duration = len(audio_data) / self.sample_rate
-            ConfigManager.console_print(f'Final chunk finished. Size: {audio_data.size} samples, Duration: {duration:.2f} seconds')
-            min_duration_ms = recording_options.get('min_duration') or 100
+            ConfigManager.console_print(
+                f"Final chunk finished. Size: {audio_data.size} samples, Duration: {duration:.2f} seconds"
+            )
+            min_duration_ms = recording_options.get("min_duration") or 100
             if (duration * 1000) >= min_duration_ms:
                 yield audio_data

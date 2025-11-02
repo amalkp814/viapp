@@ -3,6 +3,7 @@ from typing import Callable, Set
 
 from utils import ConfigManager
 
+
 class KeyListener:
     """
     A class to listen for a specific key combination using pynput.
@@ -12,29 +13,30 @@ class KeyListener:
         """
         Initialize the KeyListener.
         """
-        self.callbacks = {
-            "on_activate": [],
-            "on_deactivate": []
-        }
+        self.callbacks = {"on_activate": [], "on_deactivate": []}
         self.pressed_keys = set()
         self.activation_keys = self.parse_key_combination()
-        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        self.listener = keyboard.Listener(
+            on_press=self.on_press, on_release=self.on_release
+        )
 
     def parse_key_combination(self) -> Set:
         """
         Parse the activation key combination from the config.
         """
-        key_combination = ConfigManager.get_config_value('recording_options', 'activation_key')
+        key_combination = ConfigManager.get_config_value(
+            "recording_options", "activation_key"
+        )
         keys = set()
-        for key in key_combination.split('+'):
+        for key in key_combination.split("+"):
             key = key.strip().lower()
-            if key == 'ctrl':
+            if key == "ctrl":
                 keys.add(keyboard.Key.ctrl)
-            elif key == 'alt':
+            elif key == "alt":
                 keys.add(keyboard.Key.alt)
-            elif key == 'shift':
+            elif key == "shift":
                 keys.add(keyboard.Key.shift)
-            elif key == 'f9':
+            elif key == "f9":
                 keys.add(keyboard.Key.f9)
             else:
                 try:

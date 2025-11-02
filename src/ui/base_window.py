@@ -1,6 +1,14 @@
 from PyQt5.QtCore import Qt, QRectF
 from PyQt5.QtGui import QPainter, QBrush, QColor, QFont, QPainterPath, QGuiApplication
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMainWindow
+from PyQt5.QtWidgets import (
+    QApplication,
+    QWidget,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QHBoxLayout,
+    QMainWindow,
+)
 
 
 class BaseWindow(QMainWindow):
@@ -32,8 +40,8 @@ class BaseWindow(QMainWindow):
         title_bar_layout.setContentsMargins(0, 0, 0, 0)
 
         # Add the title label
-        title_label = QLabel('viapp')
-        title_label.setFont(QFont('Segoe UI', 12, QFont.Bold))
+        title_label = QLabel("viapp")
+        title_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("color: #404040;")
 
@@ -42,9 +50,10 @@ class BaseWindow(QMainWindow):
         close_button_layout = QHBoxLayout(close_button_widget)
         close_button_layout.setContentsMargins(0, 0, 0, 0)
 
-        close_button = QPushButton('×')
+        close_button = QPushButton("×")
         close_button.setFixedSize(25, 25)
-        close_button.setStyleSheet("""
+        close_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: transparent;
                 border: none;
@@ -53,7 +62,8 @@ class BaseWindow(QMainWindow):
             QPushButton:hover {
                 color: #000000;
             }
-        """)
+        """
+        )
         close_button.clicked.connect(self.handleCloseButton)
 
         close_button_layout.addWidget(close_button, alignment=Qt.AlignRight)
