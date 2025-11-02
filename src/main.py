@@ -47,6 +47,7 @@ class viappApp(QObject):
         self.key_listener = KeyListener()
         self.key_listener.add_callback("on_activate", self.on_activation)
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
+        self.key_listener.start()
 
         self.local_model = create_local_model()
 
@@ -130,6 +131,7 @@ class viappApp(QObject):
                 self.stop_result_thread()
             return
 
+        self.key_listener.stop()
         self.start_result_thread()
         self.stateChanged.emit('recording')
 
