@@ -114,14 +114,46 @@ class ResultThread(QThread):
         frame_duration_ms = 30
         frame_size = int(self.sample_rate * (frame_duration_ms / 1000.0))
 
-        return sd.InputStream(
-            samplerate=self.sample_rate,
-            channels=1,
-            dtype='int16',
-            blocksize=frame_size,
-            device=recording_options.get('sound_device'),
-            callback=self._audio_callback
-        )
+        device = recording_options.get('sound_device')
+        # Ensure device is an integer if specified, otherwise use default
+        if device is not None and device != '':
+            try:
+                device = int(device)
+            except (ValueError, TypeError):
+                ConfigManager.console_print(f"Warning: Invalid 'sound_device' value '{device}' in config. Using default device.")
+                device = None
+        else:
+            device = None
+
+        try:
+            return sd.InputStream(
+                samplerate=self.sample_rate,
+                channels=1,
+                dtype='int16',
+                blocksize=frame_size,
+                device=device,
+                callback=self._audio_callback
+            )
+        except sd.PortAudioError as e:
+            ConfigManager.console_print("\n--- Audio Device Error ---")
+            ConfigManager.console_print("Could not open audio device. This can happen if you don't have a default microphone set in your OS, or if the configured device is unavailable.")
+            try:
+                devices = sd.query_devices()
+                input_devices = [d for d in devices if d['max_input_channels'] > 0]
+                if not input_devices:
+                    ConfigManager.console_print("\nNo audio input devices found on this system.")
+                else:
+                    ConfigManager.console_print("\nPlease select one of the following INPUT devices and update your settings:")
+                    for i, device_info in enumerate(devices):
+                        if device_info['max_input_channels'] > 0:
+                            hostapi_name = sd.query_hostapis(device_info['hostapi'])['name']
+                            ConfigManager.console_print(f"  -> Index: {i}, Name: \"{device_info['name']}\" ({hostapi_name})")
+                ConfigManager.console_print("\nYou can select the device from the Settings window or by editing 'src/config.yaml' directly.")
+            except Exception as query_e:
+                ConfigManager.console_print(f"\nAn additional error occurred while trying to list available audio devices: {query_e}")
+            ConfigManager.console_print("--------------------------\n")
+            # Re-raise the error to be caught by the main `run` loop's exception handler
+            raise e
 
     def _process_audio_queue(self):
         recording_options = ConfigManager.get_config_section('recording_options')
