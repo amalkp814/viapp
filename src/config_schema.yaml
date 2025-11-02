@@ -87,7 +87,7 @@ model_options:
 # Configuration options for activation and recording
 recording_options:
   activation_key:
-    value: ctrl+shift+space
+    value: F9
     type: str
     description: "The keyboard shortcut to activate the recording and transcribing process. Separate keys with a '+'."
   input_backend:
