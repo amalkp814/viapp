@@ -56,7 +56,7 @@ class SettingsWindow(BaseWindow):
                 border: 1px solid #cccccc;
                 border-radius: 3px;
             }
-        \"\"\")
+        """)
 
     def init_settings_ui(self):
         """Initialize the settings user interface."""
