@@ -134,6 +134,7 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 - `add_trailing_space`: Set to `true` to add a space to the end of the transcribed text. (Default: `true`)
 - `remove_capitalization`: Set to `true` to convert the transcribed text to lowercase. (Default: `false`)
 - `input_method`: The method to use for simulating keyboard input. The `auto` option will use `ydotool` on Linux if available, otherwise `pynput`. `ydotool` is a Linux-only tool that can provide more reliable input simulation. If you are on Linux, it is recommended to install `ydotool` and use this option. (Default: `auto`)
+- `word_replacements`: A dictionary of words to replace in the transcribed text. For example, `{"gonna": "going to", "smiley face": "😊"}`. (Default: `{}`)
 
 #### Miscellaneous Options
 - `print_to_terminal`: Set to `true` to print the script status and transcribed text to the terminal. (Default: `true`)

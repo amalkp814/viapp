@@ -1,11 +1,24 @@
 import sys
 import time
 import subprocess
+import re
 from pynput.keyboard import Controller as PynputController
 
 from utils import ConfigManager
 
-class _PynputSimulator:
+class _BaseSimulator:
+    """
+    A base class for input simulators that handles word replacements.
+    """
+    def _perform_word_replacements(self, text):
+        word_replacements = ConfigManager.get_config_value('post_processing', 'word_replacements')
+        if word_replacements:
+            for old, new in word_replacements.items():
+                # Use word boundaries to avoid replacing substrings within other words
+                text = re.sub(r'\b' + re.escape(old) + r'\b', new, text, flags=re.IGNORECASE)
+        return text
+
+class _PynputSimulator(_BaseSimulator):
     """
     A class to simulate keyboard input using pynput.
     """
@@ -13,6 +26,7 @@ class _PynputSimulator:
         self.keyboard = PynputController()
 
     def typewrite(self, text):
+        text = self._perform_word_replacements(text)
         interval = ConfigManager.get_config_value('post_processing', 'writing_key_press_delay')
         for char in text:
             self.keyboard.press(char)
@@ -22,11 +36,12 @@ class _PynputSimulator:
     def cleanup(self):
         pass
 
-class _YdotoolSimulator:
+class _YdotoolSimulator(_BaseSimulator):
     """
     A class to simulate keyboard input using ydotool.
     """
     def typewrite(self, text):
+        text = self._perform_word_replacements(text)
         try:
             # Add a small delay to allow the user to switch windows
             time.sleep(0.1)

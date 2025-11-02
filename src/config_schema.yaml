@@ -130,6 +130,10 @@ post_processing:
       - auto
       - ydotool
       - pynput
+  word_replacements:
+    value: {}
+    type: dict
+    description: "A dictionary of words to replace in the transcribed text. For example, {'gonna': 'going to', 'smiley face': '😊'}"
 
 # Miscellaneous settings
 misc:

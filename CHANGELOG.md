@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added new icons for the application.
 - Added `ydotool` as an alternative input simulation method on Linux.
 - Added an `auto` input method that uses `ydotool` on Linux if available, otherwise `pynput`.
+- Added a `word_replacements` option to the configuration file.
 
 ### Changed
 - Renamed the project from "WhisperWriter" to "viapp".
