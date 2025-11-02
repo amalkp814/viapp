@@ -27,10 +27,12 @@ class ResultThread(QThread):
     Signals:
         statusSignal: Emits the current status of the thread (e.g., 'recording', 'transcribing', 'idle')
         resultSignal: Emits the transcription result
+        partialResultSignal: Emits partial transcription results
     """
 
     statusSignal = pyqtSignal(str)
     resultSignal = pyqtSignal(str)
+    partialResultSignal = pyqtSignal(str)
 
     def __init__(self, local_model=None):
         """
@@ -71,31 +73,31 @@ class ResultThread(QThread):
 
             self.statusSignal.emit('recording')
             ConfigManager.console_print('Recording...')
-            audio_data = self._record_audio()
 
-            if not self.is_running:
-                return
+            full_transcription = ""
+            for audio_chunk in self._record_audio():
+                if not self.is_running:
+                    break
 
-            if audio_data is None:
-                self.statusSignal.emit('idle')
-                return
+                self.statusSignal.emit('transcribing')
+                ConfigManager.console_print('Transcribing...')
 
-            self.statusSignal.emit('transcribing')
-            ConfigManager.console_print('Transcribing...')
+                # Time the transcription process
+                start_time = time.time()
+                result = transcribe(audio_chunk, self.local_model)
+                end_time = time.time()
 
-            # Time the transcription process
-            start_time = time.time()
-            result = transcribe(audio_data, self.local_model)
-            end_time = time.time()
+                transcription_time = end_time - start_time
+                ConfigManager.console_print(f'Transcription completed in {transcription_time:.2f} seconds. Post-processed line: {result}')
 
-            transcription_time = end_time - start_time
-            ConfigManager.console_print(f'Transcription completed in {transcription_time:.2f} seconds. Post-processed line: {result}')
+                if not self.is_running:
+                    break
 
-            if not self.is_running:
-                return
+                full_transcription += result + " "
+                self.partialResultSignal.emit(full_transcription)
 
             self.statusSignal.emit('idle')
-            self.resultSignal.emit(result)
+            self.resultSignal.emit(full_transcription)
 
         except Exception as e:
             traceback.print_exc()
@@ -106,9 +108,7 @@ class ResultThread(QThread):
 
     def _record_audio(self):
         """
-        Record audio from the microphone and save it to a temporary file.
-
-        :return: numpy array of audio data, or None if the recording is too short
+        Record audio from the microphone and yield chunks of audio data.
         """
         recording_options = ConfigManager.get_config_section('recording_options')
         self.sample_rate = recording_options.get('sample_rate') or 16000
@@ -169,17 +169,19 @@ class ResultThread(QThread):
                         silent_frame_count += 1
 
                     if speech_detected and silent_frame_count > silence_frames:
-                        break
+                        audio_data = np.array(recording, dtype=np.int16)
+                        duration = len(audio_data) / self.sample_rate
+                        ConfigManager.console_print(f'Chunk finished. Size: {audio_data.size} samples, Duration: {duration:.2f} seconds')
+                        min_duration_ms = recording_options.get('min_duration') or 100
+                        if (duration * 1000) >= min_duration_ms:
+                            yield audio_data
+                        recording = []
+                        speech_detected = False
 
-        audio_data = np.array(recording, dtype=np.int16)
-        duration = len(audio_data) / self.sample_rate
-
-        ConfigManager.console_print(f'Recording finished. Size: {audio_data.size} samples, Duration: {duration:.2f} seconds')
-
-        min_duration_ms = recording_options.get('min_duration') or 100
-
-        if (duration * 1000) < min_duration_ms:
-            ConfigManager.console_print(f'Discarded due to being too short.')
-            return None
-
-        return audio_data
+        if recording:
+            audio_data = np.array(recording, dtype=np.int16)
+            duration = len(audio_data) / self.sample_rate
+            ConfigManager.console_print(f'Final chunk finished. Size: {audio_data.size} samples, Duration: {duration:.2f} seconds')
+            min_duration_ms = recording_options.get('min_duration') or 100
+            if (duration * 1000) >= min_duration_ms:
+                yield audio_data

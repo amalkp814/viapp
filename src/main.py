@@ -148,6 +148,7 @@ class viappApp(QObject):
         self.result_thread = ResultThread(self.local_model)
         self.result_thread.statusSignal.connect(self.on_status_update)
         self.result_thread.resultSignal.connect(self.on_transcription_complete)
+        self.result_thread.partialResultSignal.connect(self.on_partial_transcription)
         self.result_thread.start()
 
     def stop_result_thread(self):
@@ -163,12 +164,18 @@ class viappApp(QObject):
         """
         self.main_window.set_state(status)
 
+    def on_partial_transcription(self, result):
+        """
+        When a partial transcription is available, update the main window.
+        """
+        self.main_window.update_transcription_label(result)
+        self.input_simulator.typewrite(result)
+
+
     def on_transcription_complete(self, result):
         """
         When the transcription is complete, type the result and start listening for the activation key again.
         """
-        self.input_simulator.typewrite(result)
-
         if ConfigManager.get_config_value('misc', 'noise_on_completion'):
             AudioPlayer(os.path.join('assets', 'beep.wav')).play(block=True)
 
@@ -177,6 +184,7 @@ class viappApp(QObject):
         else:
             self.key_listener.start()
             self.main_window.set_state('idle')
+            self.main_window.update_transcription_label("")
 
     def run(self):
         """

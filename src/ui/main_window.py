@@ -97,6 +97,10 @@ class MainWindow(BaseWindow):
             self.central_button.setStyleSheet("background-color: #f1c40f; border-radius: 60px;")
             self.status_label.setText("Transcribing...")
 
+    def update_transcription_label(self, text):
+        words = text.split()
+        self.status_label.setText(" ".join(words[-5:]))
+
     def on_central_button_clicked(self):
         if self.state == 'idle':
             self.startListening.emit()
