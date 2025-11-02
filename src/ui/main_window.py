@@ -12,6 +12,7 @@ class MainWindow(BaseWindow):
     openSettings = pyqtSignal()
     startListening = pyqtSignal()
     stopListening = pyqtSignal()
+    stopListeningAndDiscard = pyqtSignal()
     closeApp = pyqtSignal()
 
     def __init__(self):
@@ -28,18 +29,6 @@ class MainWindow(BaseWindow):
         """
         # Main vertical layout
         main_v_layout = QVBoxLayout()
-
-        # Top layout for close button
-        top_layout = QHBoxLayout()
-        top_layout.addStretch(1)
-        close_btn = QPushButton("×")
-        close_btn.setFixedSize(25, 25)
-        close_btn.setStyleSheet(
-            "background-color: transparent; border: none; font-size: 20px;"
-        )
-        close_btn.clicked.connect(self.hide)
-        top_layout.addWidget(close_btn)
-        main_v_layout.addLayout(top_layout)
 
         main_v_layout.addStretch(1)
 
@@ -120,9 +109,12 @@ class MainWindow(BaseWindow):
 
     def closeEvent(self, event):
         """
-        Close the application when the main window is closed.
+        Override the close event to hide the window instead of closing it.
         """
-        self.closeApp.emit()
+        if self.state == "recording":
+            self.stopListeningAndDiscard.emit()
+        event.ignore()
+        self.hide()
 
 
 if __name__ == "__main__":
