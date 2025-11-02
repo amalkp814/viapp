@@ -126,6 +126,7 @@ class ResultThread(QThread):
             device = None
 
         try:
+            # First attempt to open the stream with the specified or default device
             return sd.InputStream(
                 samplerate=self.sample_rate,
                 channels=1,
@@ -136,24 +137,38 @@ class ResultThread(QThread):
             )
         except sd.PortAudioError as e:
             ConfigManager.console_print("\n--- Audio Device Error ---")
-            ConfigManager.console_print("Could not open audio device. This can happen if you don't have a default microphone set in your OS, or if the configured device is unavailable.")
+            ConfigManager.console_print("Could not open default audio device. This can happen if you don't have a default microphone set in your OS.")
+
             try:
                 devices = sd.query_devices()
-                input_devices = [d for d in devices if d['max_input_channels'] > 0]
+                input_devices = [(i, d) for i, d in enumerate(devices) if d['max_input_channels'] > 0]
+
                 if not input_devices:
-                    ConfigManager.console_print("\nNo audio input devices found on this system.")
-                else:
-                    ConfigManager.console_print("\nPlease select one of the following INPUT devices and update your settings:")
-                    for i, device_info in enumerate(devices):
-                        if device_info['max_input_channels'] > 0:
-                            hostapi_name = sd.query_hostapis(device_info['hostapi'])['name']
-                            ConfigManager.console_print(f"  -> Index: {i}, Name: \"{device_info['name']}\" ({hostapi_name})")
-                ConfigManager.console_print("\nYou can select the device from the Settings window or by editing 'src/config.yaml' directly.")
-            except Exception as query_e:
-                ConfigManager.console_print(f"\nAn additional error occurred while trying to list available audio devices: {query_e}")
-            ConfigManager.console_print("--------------------------\n")
-            # Re-raise the error to be caught by the main `run` loop's exception handler
-            raise e
+                    ConfigManager.console_print("\nFATAL: No audio input devices found on this system.")
+                    ConfigManager.console_print("--------------------------\n")
+                    raise e # Re-raise the original error as there's nothing we can do
+
+                # Attempt to use the first available input device as a fallback
+                fallback_device_index, fallback_device_info = input_devices[0]
+                ConfigManager.console_print(f"Attempting to use the first available microphone as a fallback: '{fallback_device_info['name']}' (Index: {fallback_device_index})")
+                ConfigManager.console_print("If this is not the microphone you want to use, please specify the correct 'sound_device' index in your settings.")
+                ConfigManager.console_print("--------------------------\n")
+
+                # Second attempt to open the stream with the fallback device
+                return sd.InputStream(
+                    samplerate=self.sample_rate,
+                    channels=1,
+                    dtype='int16',
+                    blocksize=frame_size,
+                    device=fallback_device_index,
+                    callback=self._audio_callback
+                )
+            except Exception as fallback_e:
+                ConfigManager.console_print(f"\nFATAL: The fallback audio device also failed to open: {fallback_e}")
+                ConfigManager.console_print("Please ensure your audio devices are working correctly and are not in use by another application.")
+                ConfigManager.console_print("--------------------------\n")
+                # Re-raise the original error to be caught by the main `run` loop's exception handler
+                raise e
 
     def _process_audio_queue(self):
         recording_options = ConfigManager.get_config_section('recording_options')
