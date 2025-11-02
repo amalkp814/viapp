@@ -81,14 +81,6 @@ class SettingsWindow(BaseWindow):
         self.create_tabs()
         self.create_buttons()
 
-        # Connect the use_api checkbox state change
-        self.use_api_checkbox = self.findChild(QCheckBox, "model_options_use_api_input")
-        if self.use_api_checkbox:
-            self.use_api_checkbox.stateChanged.connect(
-                lambda: self.toggle_api_local_options(self.use_api_checkbox.isChecked())
-            )
-            self.toggle_api_local_options(self.use_api_checkbox.isChecked())
-
     def create_tabs(self):
         """Create tabs for each category in the schema."""
         for category, settings in self.schema.items():
@@ -187,8 +179,6 @@ class SettingsWindow(BaseWindow):
     def create_checkbox(self, value, key):
         widget = QCheckBox()
         widget.setChecked(value)
-        if key == "use_api":
-            widget.setObjectName("model_options_use_api_input")
         return widget
 
     def create_combobox(self, value, options):
@@ -199,10 +189,7 @@ class SettingsWindow(BaseWindow):
 
     def create_line_edit(self, value, key=None):
         widget = QLineEdit(value)
-        if key == "api_key":
-            widget.setEchoMode(QLineEdit.Password)
-            widget.setText(os.getenv("OPENAI_API_KEY") or value)
-        elif key == "model_path":
+        if key == "model_path":
             layout = QHBoxLayout()
             layout.addWidget(widget)
             browse_button = QPushButton("Browse")
@@ -315,29 +302,6 @@ class SettingsWindow(BaseWindow):
             if isinstance(line_edit, QLineEdit):
                 return line_edit.text() or None
         return None
-
-    def toggle_api_local_options(self, use_api):
-        """Toggle visibility of API and local options."""
-        self.iterate_settings(
-            lambda w, c, s, k, m: self.toggle_widget_visibility(w, c, s, k, use_api)
-        )
-
-    def toggle_widget_visibility(self, widget, category, sub_category, key, use_api):
-        if sub_category in ["api", "local"]:
-            widget.setVisible(use_api if sub_category == "api" else not use_api)
-
-            # Also toggle visibility of the corresponding label and help button
-            label = self.findChild(QLabel, f"{category}_{sub_category}_{key}_label")
-            help_button = self.findChild(
-                QToolButton, f"{category}_{sub_category}_{key}_help"
-            )
-
-            if label:
-                label.setVisible(use_api if sub_category == "api" else not use_api)
-            if help_button:
-                help_button.setVisible(
-                    use_api if sub_category == "api" else not use_api
-                )
 
     def iterate_settings(self, func):
         """Iterate over all settings and apply a function to each."""

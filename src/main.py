@@ -44,6 +44,7 @@ class viappApp(QObject):
 
         self.key_listener = KeyListener()
         self.key_listener.add_callback("on_activate", self.on_activation)
+        self.key_listener.add_callback("on_deactivate", self.on_deactivation)
         self.key_listener.start()
 
         self.local_model = create_local_model()
@@ -53,9 +54,7 @@ class viappApp(QObject):
         self.main_window = MainWindow()
         self.main_window.openSettings.connect(self.settings_window.show)
         self.main_window.startListening.connect(self.on_activation)
-        self.main_window.stopListening.connect(
-            self.on_activation
-        )  # Connect stopListening to on_activation
+        self.main_window.stopListening.connect(self.on_activation)
         self.main_window.closeApp.connect(self.exit_app)
 
         self.stateChanged.connect(self.main_window.set_state)
@@ -134,6 +133,18 @@ class viappApp(QObject):
 
         self.start_result_thread()
         self.stateChanged.emit("recording")
+
+    def on_deactivation(self):
+        """
+        Called when the activation key combination is released.
+        """
+        if (
+            ConfigManager.get_config_value("recording_options", "recording_mode")
+            in ("hold_to_record",)
+        ):
+            if self.result_thread and self.result_thread.isRunning():
+                self.result_thread.stop_recording()
+                self.stateChanged.emit("transcribing")
 
     def start_result_thread(self):
         """
