@@ -11,7 +11,6 @@ from key_listener import KeyListener
 from result_thread import ResultThread
 from ui.main_window import MainWindow
 from ui.settings_window import SettingsWindow
-from ui.status_window import StatusWindow
 from transcription import create_local_model
 from input_simulation import InputSimulator
 from utils import ConfigManager
@@ -56,11 +55,9 @@ class viappApp(QObject):
 
         self.main_window = MainWindow()
         self.main_window.openSettings.connect(self.settings_window.show)
-        self.main_window.startListening.connect(self.key_listener.start)
+        self.main_window.startListening.connect(self.on_activation)
+        self.main_window.stopListening.connect(self.on_deactivation)
         self.main_window.closeApp.connect(self.exit_app)
-
-        if not ConfigManager.get_config_value('misc', 'hide_status_window'):
-            self.status_window = StatusWindow()
 
         self.create_tray_icon()
         self.main_window.show()
@@ -137,7 +134,7 @@ class viappApp(QObject):
         """
         Called when the activation key combination is released.
         """
-        if ConfigManager.get_config_value('recording_options', 'recording_mode') == 'hold_to_record':
+        if ConfigManager.get_config_value('recording_options', 'recording_mode') in ('hold_to_record', 'press_to_toggle'):
             if self.result_thread and self.result_thread.isRunning():
                 self.result_thread.stop_recording()
 
@@ -149,9 +146,7 @@ class viappApp(QObject):
             return
 
         self.result_thread = ResultThread(self.local_model)
-        if not ConfigManager.get_config_value('misc', 'hide_status_window'):
-            self.result_thread.statusSignal.connect(self.status_window.updateStatus)
-            self.status_window.closeSignal.connect(self.stop_result_thread)
+        self.result_thread.statusSignal.connect(self.on_status_update)
         self.result_thread.resultSignal.connect(self.on_transcription_complete)
         self.result_thread.start()
 
@@ -161,6 +156,12 @@ class viappApp(QObject):
         """
         if self.result_thread and self.result_thread.isRunning():
             self.result_thread.stop()
+
+    def on_status_update(self, status):
+        """
+        Update the main window's state.
+        """
+        self.main_window.set_state(status)
 
     def on_transcription_complete(self, result):
         """
@@ -175,6 +176,7 @@ class viappApp(QObject):
             self.start_result_thread()
         else:
             self.key_listener.start()
+            self.main_window.set_state('idle')
 
     def run(self):
         """

@@ -112,6 +112,6 @@ class BaseWindow(QMainWindow):
         path.addRoundedRect(QRectF(self.rect()), 20, 20)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(QBrush(QColor(255, 255, 255, 220)))
+        painter.setBrush(QBrush(QColor(240, 240, 240, 220)))
         painter.setPen(Qt.NoPen)
         painter.drawPath(path)
