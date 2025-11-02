@@ -23,8 +23,44 @@ class SettingsWindow(BaseWindow):
         self.schema = ConfigManager.get_schema()
         self.init_settings_ui()
 
+    def apply_stylesheet(self):
+        self.setStyleSheet(\"\"\"
+            QTabWidget::pane {
+                border-top: 2px solid #cccccc;
+            }
+            QTabBar::tab {
+                background: #f0f0f0;
+                border: 1px solid #cccccc;
+                border-bottom-color: #cccccc;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                min-width: 8ex;
+                padding: 5px;
+            }
+            QTabBar::tab:selected {
+                background: #ffffff;
+                border-color: #9B9B9B;
+                border-bottom-color: #ffffff;
+            }
+            QPushButton {
+                background-color: #cccccc;
+                border: 1px solid #cccccc;
+                padding: 5px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #bdbdbd;
+            }
+            QLineEdit, QComboBox {
+                padding: 2px;
+                border: 1px solid #cccccc;
+                border-radius: 3px;
+            }
+        \"\"\")
+
     def init_settings_ui(self):
         """Initialize the settings user interface."""
+        self.apply_stylesheet()
         self.tabs = QTabWidget()
         self.main_layout.addWidget(self.tabs)
 
