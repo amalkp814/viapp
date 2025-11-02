@@ -24,7 +24,7 @@ class SettingsWindow(BaseWindow):
         self.init_settings_ui()
 
     def apply_stylesheet(self):
-        self.setStyleSheet(\"\"\"
+        self.setStyleSheet("""
             QTabWidget::pane {
                 border-top: 2px solid #cccccc;
             }
