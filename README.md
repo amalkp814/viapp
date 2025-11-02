@@ -138,6 +138,14 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 
 #### Miscellaneous Options
 - `print_to_terminal`: Set to `true` to print the script status and transcribed text to the terminal. (Default: `true`)
+
+## System Tray Menu
+
+The application has a system tray icon with a dynamic context menu:
+- **viapp Main Menu**: Shows the main window.
+- **Start/Stop Recording**: Starts or stops the recording.
+- **Settings**: Opens the settings window.
+- **Exit**: Exits the application.
 - `noise_on_completion`: Set to `true` to play a noise after the transcription has been typed out. (Default: `false`)
 
 If any of the configuration options are invalid or not provided, the program will use the default values.
