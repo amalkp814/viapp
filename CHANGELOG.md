@@ -18,9 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed the project from "WhisperWriter" to "viapp".
 - The application now uses the `small.en` model by default.
 - Increased VAD aggressiveness for faster transcriptions.
+- The main window now minimizes to the system tray instead of closing.
+- The system tray menu is now dynamic, showing "Start/Stop Recording" based on the application's state.
 
 ### Fixed
 - The application now handles `PortAudioError` gracefully by providing a list of available audio devices and instructions on how to configure them.
+- The F9 hotkey and all recording modes now work correctly.
 
 ### Removed
 - Removed all API-based transcription functionality.
