@@ -26,17 +26,22 @@ class ResultThread(QThread):
         super().__init__()
         self.local_model = local_model
         self.is_running = True
+        self.is_recording = False
         self.audio_queue = Queue()
         self.transcription_queue = Queue()
 
     def stop(self):
         """Stop the entire thread execution."""
         self.is_running = False
-        self.wait()
+
+    def stop_recording(self):
+        """Stop the current recording session."""
+        self.is_recording = False
 
     def run(self):
         """Main execution method for the thread."""
         try:
+            self.is_recording = True
             self.statusSignal.emit("recording")
             ConfigManager.console_print("Recording...")
 
@@ -46,11 +51,12 @@ class ResultThread(QThread):
             transcription_thread = threading.Thread(target=self._transcribe_audio_queue)
             transcription_thread.start()
 
-            while self.is_running:
+            while self.is_running and self.is_recording:
                 time.sleep(0.1)
 
             stream.stop()
             stream.close()
+            self.is_recording = False
             transcription_thread.join()
 
             self.statusSignal.emit("idle")
