@@ -38,8 +38,8 @@ class ResultThread(QThread):
             self.statusSignal.emit("recording")
             ConfigManager.console_print("Recording...")
 
-            stream = self._get_audio_stream()
-            stream.start()
+            audio_thread = threading.Thread(target=self._audio_recorder)
+            audio_thread.start()
 
             transcription_thread = threading.Thread(target=self._transcribe_audio_queue)
             transcription_thread.start()
@@ -47,8 +47,7 @@ class ResultThread(QThread):
             while self.is_running:
                 time.sleep(0.1)
 
-            stream.stop()
-            stream.close()
+            audio_thread.join()
             transcription_thread.join()
 
             self.statusSignal.emit("idle")
@@ -58,27 +57,35 @@ class ResultThread(QThread):
             self.statusSignal.emit("error")
             self.resultSignal.emit("")
 
-    def _audio_callback(self, indata, frames, time, status):
-        if status:
-            ConfigManager.console_print(f"Audio callback status: {status}")
-        self.audio_queue.put(indata.copy())
-
-    def _get_audio_stream(self):
+    def _audio_recorder(self):
+        """
+        A dedicated thread for capturing audio from the microphone.
+        """
         recording_options = ConfigManager.get_config_section("recording_options")
-        self.sample_rate = recording_options.get("sample_rate") or 16000
-        frame_duration_ms = 100  # Increased for larger chunks
-        frame_size = int(self.sample_rate * (frame_duration_ms / 1000.0))
+        sample_rate = recording_options.get("sample_rate") or 16000
+        frame_duration_ms = 100
+        frame_size = int(sample_rate * (frame_duration_ms / 1000.0))
 
-        return sd.InputStream(
-            samplerate=self.sample_rate,
+        with sd.InputStream(
+            samplerate=sample_rate,
             channels=1,
             dtype="int16",
             blocksize=frame_size,
             device=recording_options.get("sound_device"),
             callback=self._audio_callback,
-        )
+        ):
+            while self.is_running:
+                time.sleep(0.1)
+
+    def _audio_callback(self, indata, frames, time, status):
+        if status:
+            ConfigManager.console_print(f"Audio callback status: {status}")
+        self.audio_queue.put(indata.copy())
 
     def _transcribe_audio_queue(self):
+        """
+        A dedicated thread for transcribing audio from the queue.
+        """
         while self.is_running:
             try:
                 audio_chunk = self.audio_queue.get(timeout=1.0)
