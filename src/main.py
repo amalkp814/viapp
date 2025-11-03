@@ -47,6 +47,7 @@ class viappApp(QObject):
         self.key_listener = KeyListener()
         self.key_listener.add_callback("on_activate", self.on_activation)
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
+        self.key_listener.start()
 
         model_options = ConfigManager.get_config_section('model_options')
         model_path = model_options.get('local', {}).get('model_path')
@@ -123,13 +124,12 @@ class viappApp(QObject):
         """
         Called when the activation key combination is pressed.
         """
+        self.main_window.show()
         if self.result_thread and self.result_thread.isRunning():
             recording_mode = ConfigManager.get_config_value('recording_options', 'recording_mode')
-            if recording_mode == 'press_to_toggle':
+            if recording_mode in ('press_to_toggle', 'continuous'):
                 self.result_thread.stop_recording()
                 self.stateChanged.emit('transcribing')
-            elif recording_mode == 'continuous':
-                self.stop_result_thread()
             return
 
         self.start_result_thread()
