@@ -43,7 +43,7 @@ class viappApp(QObject):
         self.input_simulator = InputSimulator()
 
         self.key_listener = KeyListener()
-        self.key_listener.add_callback("on_activate", self.on_activation)
+        self.key_listener.add_callback("on_activate", self.toggle_recording)
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
         self.key_listener.start()
 
@@ -53,13 +53,11 @@ class viappApp(QObject):
 
         self.main_window = MainWindow()
         self.main_window.openSettings.connect(self.settings_window.show)
-        self.main_window.startListening.connect(self.on_activation)
-        self.main_window.stopListening.connect(self.stop_recording_and_transcribe)
-        self.main_window.stopListeningAndDiscard.connect(self.stop_result_thread)
+        self.main_window.startListening.connect(self.toggle_recording)
+        self.main_window.stopListening.connect(self.toggle_recording)
         self.main_window.closeApp.connect(self.exit_app)
 
         self.stateChanged.connect(self.main_window.set_state)
-        self.stateChanged.connect(self.update_tray_menu)
 
         self.create_tray_icon()
         self.main_window.show()
@@ -71,29 +69,14 @@ class viappApp(QObject):
         self.tray_icon = QSystemTrayIcon(
             QIcon(os.path.join("assets", "v-logo.png")), self.app
         )
-        self.tray_icon.show()
-        self.update_tray_menu("idle")
 
-    def update_tray_menu(self, state):
-        """
-        Update the system tray icon's context menu based on the application's state.
-        """
         tray_menu = QMenu()
 
         show_action = QAction("viapp Main Menu", self.app)
         show_action.triggered.connect(self.main_window.show)
         tray_menu.addAction(show_action)
 
-        if state == "idle":
-            start_action = QAction("Start Recording", self.app)
-            start_action.triggered.connect(self.on_activation)
-            tray_menu.addAction(start_action)
-        else:
-            stop_action = QAction("Stop Recording", self.app)
-            stop_action.triggered.connect(self.stop_recording_and_transcribe)
-            tray_menu.addAction(stop_action)
-
-        settings_action = QAction("Settings", self.app)
+        settings_action = QAction("Open Settings", self.app)
         settings_action.triggered.connect(self.settings_window.show)
         tray_menu.addAction(settings_action)
 
@@ -102,6 +85,7 @@ class viappApp(QObject):
         tray_menu.addAction(exit_action)
 
         self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
 
     def cleanup(self):
         if self.key_listener:
@@ -134,21 +118,20 @@ class viappApp(QObject):
             )
             self.initialize_components()
 
-    def on_activation(self):
+    def toggle_recording(self):
         """
-        Called when the activation key combination is pressed. Toggles recording.
+        Toggle the recording state.
         """
-        self.main_window.show()
         if self.result_thread and self.result_thread.isRunning():
             recording_mode = ConfigManager.get_config_value(
                 "recording_options", "recording_mode"
             )
             if recording_mode in ("press_to_toggle", "continuous"):
-                self.stop_recording_and_transcribe()
-            return
-
-        self.start_result_thread()
-        self.stateChanged.emit("recording")
+                self.result_thread.stop_recording()
+                self.stateChanged.emit("transcribing")
+        else:
+            self.start_result_thread()
+            self.stateChanged.emit("recording")
 
     def on_deactivation(self):
         """
@@ -158,13 +141,9 @@ class viappApp(QObject):
             ConfigManager.get_config_value("recording_options", "recording_mode")
             in ("hold_to_record",)
         ):
-            self.stop_recording_and_transcribe()
-
-    def stop_recording_and_transcribe(self):
-        """Stops the current recording and begins transcription."""
-        if self.result_thread and self.result_thread.isRunning():
-            self.result_thread.stop_recording()
-            self.stateChanged.emit("idle")
+            if self.result_thread and self.result_thread.isRunning():
+                self.result_thread.stop_recording()
+                self.stateChanged.emit("transcribing")
 
     def start_result_thread(self):
         """
@@ -181,11 +160,11 @@ class viappApp(QObject):
 
     def stop_result_thread(self):
         """
-        Stop the result thread immediately and discard audio.
+        Stop the result thread.
         """
         if self.result_thread and self.result_thread.isRunning():
             self.result_thread.stop()
-            self.stateChanged.emit("idle")
+        self.stateChanged.emit("idle")
 
     def on_status_update(self, status):
         """
