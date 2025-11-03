@@ -56,8 +56,6 @@ class ResultThread(QThread):
         self.mutex.lock()
         self.is_running = False
         self.mutex.unlock()
-        self.statusSignal.emit("idle")
-        self.wait()
 
     def run(self):
         """Main execution method for the thread."""

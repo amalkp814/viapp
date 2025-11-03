@@ -55,7 +55,7 @@ class viappApp(QObject):
         self.main_window.openSettings.connect(self.settings_window.show)
         self.main_window.startListening.connect(self.on_activation)
         self.main_window.stopListening.connect(self.on_activation)
-        self.main_window.stopListeningAndDiscard.connect(self.on_stop_listening_and_discard)
+        self.main_window.stopListeningAndDiscard.connect(self.stop_result_thread)
         self.main_window.closeApp.connect(self.exit_app)
 
         self.stateChanged.connect(self.main_window.set_state)
@@ -163,14 +163,6 @@ class viappApp(QObject):
                 self.result_thread.stop_recording()
                 self.stateChanged.emit("transcribing")
 
-    def on_stop_listening_and_discard(self):
-        """
-        Stop the recording and discard the audio.
-        """
-        if self.result_thread and self.result_thread.isRunning():
-            self.result_thread.stop()
-            self.stateChanged.emit("idle")
-
     def start_result_thread(self):
         """
         Start the result thread to record audio and transcribe it.
@@ -190,7 +182,7 @@ class viappApp(QObject):
         """
         if self.result_thread and self.result_thread.isRunning():
             self.result_thread.stop()
-        self.stateChanged.emit("idle")
+            self.stateChanged.emit("idle")
 
     def on_status_update(self, status):
         """
