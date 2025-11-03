@@ -26,7 +26,7 @@ class BaseWindow(QMainWindow):
         Initialize the user interface.
         """
         self.setWindowTitle(title)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setFixedSize(width, height)
 
