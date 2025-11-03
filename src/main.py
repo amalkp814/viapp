@@ -167,7 +167,9 @@ class viappApp(QObject):
         """
         Stop the recording and discard the audio.
         """
-        self.stop_result_thread()
+        if self.result_thread and self.result_thread.isRunning():
+            self.result_thread.stop()
+            self.stateChanged.emit("idle")
 
     def start_result_thread(self):
         """
