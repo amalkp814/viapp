@@ -1,7 +1,5 @@
 import os
 import sys
-import time
-from pynput.keyboard import Controller
 from PyQt5.QtCore import QObject, QProcess, pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QMessageBox
@@ -24,7 +22,7 @@ class viappApp(QObject):
         """
         super().__init__()
         self.app = QApplication(sys.argv)
-        self.app.setWindowIcon(QIcon(os.path.join('assets', 'v-logo.png')))
+        self.app.setWindowIcon(QIcon(os.path.join("assets", "v-logo.png")))
 
         ConfigManager.initialize()
 
@@ -35,7 +33,7 @@ class viappApp(QObject):
         if ConfigManager.config_file_exists():
             self.initialize_components()
         else:
-            print('No valid configuration file found. Opening settings window...')
+            print("No valid configuration file found. Opening settings window...")
             self.settings_window.show()
 
     def initialize_components(self):
@@ -49,19 +47,19 @@ class viappApp(QObject):
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
         self.key_listener.start()
 
-        model_options = ConfigManager.get_config_section('model_options')
-        model_path = model_options.get('local', {}).get('model_path')
-        self.local_model = create_local_model() if not model_options.get('use_api') else None
+        self.local_model = create_local_model()
 
         self.result_thread = None
 
         self.main_window = MainWindow()
         self.main_window.openSettings.connect(self.settings_window.show)
         self.main_window.startListening.connect(self.on_activation)
-        self.main_window.stopListening.connect(self.on_deactivation)
+        self.main_window.stopListening.connect(self.stop_recording_and_transcribe)
+        self.main_window.stopListeningAndDiscard.connect(self.stop_result_thread)
         self.main_window.closeApp.connect(self.exit_app)
 
         self.stateChanged.connect(self.main_window.set_state)
+        self.stateChanged.connect(self.update_tray_menu)
 
         self.create_tray_icon()
         self.main_window.show()
@@ -70,24 +68,40 @@ class viappApp(QObject):
         """
         Create the system tray icon and its context menu.
         """
-        self.tray_icon = QSystemTrayIcon(QIcon(os.path.join('assets', 'v-logo.png')), self.app)
+        self.tray_icon = QSystemTrayIcon(
+            QIcon(os.path.join("assets", "v-logo.png")), self.app
+        )
+        self.tray_icon.show()
+        self.update_tray_menu("idle")
 
+    def update_tray_menu(self, state):
+        """
+        Update the system tray icon's context menu based on the application's state.
+        """
         tray_menu = QMenu()
 
-        show_action = QAction('viapp Main Menu', self.app)
+        show_action = QAction("viapp Main Menu", self.app)
         show_action.triggered.connect(self.main_window.show)
         tray_menu.addAction(show_action)
 
-        settings_action = QAction('Open Settings', self.app)
+        if state == "idle":
+            start_action = QAction("Start Recording", self.app)
+            start_action.triggered.connect(self.on_activation)
+            tray_menu.addAction(start_action)
+        else:
+            stop_action = QAction("Stop Recording", self.app)
+            stop_action.triggered.connect(self.stop_recording_and_transcribe)
+            tray_menu.addAction(stop_action)
+
+        settings_action = QAction("Settings", self.app)
         settings_action.triggered.connect(self.settings_window.show)
         tray_menu.addAction(settings_action)
 
-        exit_action = QAction('Exit', self.app)
+        exit_action = QAction("Exit", self.app)
         exit_action.triggered.connect(self.exit_app)
         tray_menu.addAction(exit_action)
 
         self.tray_icon.setContextMenu(tray_menu)
-        self.tray_icon.show()
 
     def cleanup(self):
         if self.key_listener:
@@ -112,37 +126,45 @@ class viappApp(QObject):
         """
         If settings is closed without saving on first run, initialize the components with default values.
         """
-        if not os.path.exists(os.path.join('src', 'config.yaml')):
+        if not os.path.exists(os.path.join("src", "config.yaml")):
             QMessageBox.information(
                 self.settings_window,
-                'Using Default Values',
-                'Settings closed without saving. Default values are being used.'
+                "Using Default Values",
+                "Settings closed without saving. Default values are being used.",
             )
             self.initialize_components()
 
     def on_activation(self):
         """
-        Called when the activation key combination is pressed.
+        Called when the activation key combination is pressed. Toggles recording.
         """
         self.main_window.show()
         if self.result_thread and self.result_thread.isRunning():
-            recording_mode = ConfigManager.get_config_value('recording_options', 'recording_mode')
-            if recording_mode in ('press_to_toggle', 'continuous'):
-                self.result_thread.stop_recording()
-                self.stateChanged.emit('idle')
+            recording_mode = ConfigManager.get_config_value(
+                "recording_options", "recording_mode"
+            )
+            if recording_mode in ("press_to_toggle", "continuous"):
+                self.stop_recording_and_transcribe()
             return
 
         self.start_result_thread()
-        self.stateChanged.emit('recording')
+        self.stateChanged.emit("recording")
 
     def on_deactivation(self):
         """
         Called when the activation key combination is released.
         """
-        if ConfigManager.get_config_value('recording_options', 'recording_mode') in ('hold_to_record', 'press_to_toggle'):
-            if self.result_thread and self.result_thread.isRunning():
-                self.result_thread.stop_recording()
-                self.stateChanged.emit('idle')
+        if (
+            ConfigManager.get_config_value("recording_options", "recording_mode")
+            in ("hold_to_record",)
+        ):
+            self.stop_recording_and_transcribe()
+
+    def stop_recording_and_transcribe(self):
+        """Stops the current recording and begins transcription."""
+        if self.result_thread and self.result_thread.isRunning():
+            self.result_thread.stop_recording()
+            self.stateChanged.emit("idle")
 
     def start_result_thread(self):
         """
@@ -159,12 +181,11 @@ class viappApp(QObject):
 
     def stop_result_thread(self):
         """
-        Stop the result thread.
+        Stop the result thread immediately and discard audio.
         """
         if self.result_thread and self.result_thread.isRunning():
             self.result_thread.stop()
-        self.stateChanged.emit('idle')
-
+            self.stateChanged.emit("idle")
 
     def on_status_update(self, status):
         """
@@ -184,11 +205,13 @@ class viappApp(QObject):
         """
         self.input_simulator.typewrite(result)
 
-        if ConfigManager.get_config_value('recording_options', 'recording_mode') == 'continuous':
+        if (
+            ConfigManager.get_config_value("recording_options", "recording_mode")
+            == "continuous"
+        ):
             self.start_result_thread()
         else:
-            self.key_listener.start()
-            self.stateChanged.emit('idle')
+            self.stateChanged.emit("idle")
             self.main_window.update_transcription_label("")
 
     def run(self):
@@ -198,6 +221,6 @@ class viappApp(QObject):
         sys.exit(self.app.exec_())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = viappApp()
     app.run()
