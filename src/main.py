@@ -129,7 +129,7 @@ class viappApp(QObject):
             recording_mode = ConfigManager.get_config_value('recording_options', 'recording_mode')
             if recording_mode in ('press_to_toggle', 'continuous'):
                 self.result_thread.stop_recording()
-                self.stateChanged.emit('transcribing')
+                self.stateChanged.emit('idle')
             return
 
         self.start_result_thread()
@@ -142,7 +142,7 @@ class viappApp(QObject):
         if ConfigManager.get_config_value('recording_options', 'recording_mode') in ('hold_to_record', 'press_to_toggle'):
             if self.result_thread and self.result_thread.isRunning():
                 self.result_thread.stop_recording()
-                self.stateChanged.emit('transcribing')
+                self.stateChanged.emit('idle')
 
     def start_result_thread(self):
         """
