@@ -47,8 +47,6 @@ class viappApp(QObject):
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
         self.key_listener.start()
 
-        self.local_model = create_local_model()
-
         self.result_thread = None
 
         self.main_window = MainWindow()
@@ -162,7 +160,7 @@ class viappApp(QObject):
         if self.result_thread and self.result_thread.isRunning():
             return
 
-        self.result_thread = ResultThread(self.local_model)
+        self.result_thread = ResultThread()
         self.result_thread.statusSignal.connect(self.on_status_update)
         self.result_thread.resultSignal.connect(self.on_transcription_complete)
         self.result_thread.partialResultSignal.connect(self.on_partial_transcription)

@@ -1,18 +1,20 @@
 import time
 import traceback
-import numpy as np
 import sounddevice as sd
 from PyQt5.QtCore import QThread, pyqtSignal
 from multiprocessing import Process, Queue
 
-from transcription import transcribe
+from transcription import transcribe, create_local_model
 from utils import ConfigManager
 
 
-def transcription_process(audio_queue, result_queue, partial_result_queue, local_model):
+def transcription_process(audio_queue, result_queue, partial_result_queue):
     """
     A separate process dedicated to transcribing audio data.
+    Initializes its own transcription model.
     """
+    local_model = create_local_model()
+
     while True:
         try:
             audio_chunk = audio_queue.get()
@@ -20,12 +22,9 @@ def transcription_process(audio_queue, result_queue, partial_result_queue, local
                 break
             result = transcribe(audio_chunk, local_model)
             if result:
-                # Use partial_result_queue for live updates
                 partial_result_queue.put(result)
         except Exception as e:
             traceback.print_exc()
-            # Optionally, put an error message on the result queue
-            # result_queue.put(f"Error: {e}")
             continue
 
 
@@ -38,23 +37,26 @@ class ResultThread(QThread):
     resultSignal = pyqtSignal(str)
     partialResultSignal = pyqtSignal(str)
 
-    def __init__(self, local_model=None):
+    def __init__(self):
         """
         Initialize the ResultThread.
         """
         super().__init__()
-        self.local_model = local_model
         self.is_running = False
         self.audio_queue = Queue()
         self.result_queue = Queue()
         self.partial_result_queue = Queue()
         self.transcription_process = None
+        self.partial_result_monitor = None
 
     def stop(self):
         """Stop the entire thread execution and the transcription process."""
         self.is_running = False
-        if self.transcription_process:
-            self.audio_queue.put(None)  # Send sentinel value to stop the process
+        if self.partial_result_monitor:
+            self.partial_result_monitor.stop()
+
+        if self.transcription_process and self.transcription_process.is_alive():
+            self.audio_queue.put(None)
             self.transcription_process.join(timeout=2)
             if self.transcription_process.is_alive():
                 self.transcription_process.terminate()
@@ -66,22 +68,17 @@ class ResultThread(QThread):
             ConfigManager.console_print("Recording...")
             self.is_running = True
 
-            # Start the transcription process
             self.transcription_process = Process(
                 target=transcription_process,
                 args=(
                     self.audio_queue,
                     self.result_queue,
                     self.partial_result_queue,
-                    self.local_model,
                 ),
             )
             self.transcription_process.start()
 
-            # Start monitoring for partial results
             self.start_partial_result_monitoring()
-
-            # Start audio recording in the main thread of this QThread
             self._audio_recorder()
 
             self.statusSignal.emit("idle")
@@ -91,7 +88,7 @@ class ResultThread(QThread):
             traceback.print_exc()
             self.statusSignal.emit("error")
         finally:
-            self.resultSignal.emit("")  # Ensure a signal is always emitted on exit
+            self.resultSignal.emit("")
 
     def start_partial_result_monitoring(self):
         """Starts a QThread worker to monitor the partial result queue."""
@@ -107,7 +104,8 @@ class ResultThread(QThread):
                 while self.is_running:
                     try:
                         result = self.queue.get(timeout=0.1)
-                        self.signal.emit(result)
+                        if result:
+                            self.signal.emit(result)
                     except Exception:
                         continue
 
@@ -128,7 +126,6 @@ class ResultThread(QThread):
         frame_duration_ms = 100
         frame_size = int(sample_rate * (frame_duration_ms / 1000.0))
 
-        # Using a context manager for the InputStream
         try:
             with sd.InputStream(
                 samplerate=sample_rate,
@@ -141,10 +138,14 @@ class ResultThread(QThread):
                 while self.is_running:
                     time.sleep(0.1)
         except sd.PortAudioError as pae:
-            ConfigManager.console_print(f"PortAudioError in InputStream: {pae}", "error")
+            ConfigManager.console_print(
+                f"PortAudioError in InputStream: {pae}", "error"
+            )
             self.statusSignal.emit("error")
         except Exception as e:
-            ConfigManager.console_print(f"An unexpected error occurred in _audio_recorder: {e}", "error")
+            ConfigManager.console_print(
+                f"An unexpected error occurred in _audio_recorder: {e}", "error"
+            )
             self.statusSignal.emit("error")
 
     def _audio_callback(self, indata, frames, time, status):
