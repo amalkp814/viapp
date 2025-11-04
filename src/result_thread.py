@@ -3,16 +3,35 @@ import traceback
 import numpy as np
 import sounddevice as sd
 from PyQt5.QtCore import QThread, pyqtSignal
-from queue import Queue
-import threading
+from multiprocessing import Process, Queue
 
 from transcription import transcribe
 from utils import ConfigManager
 
 
+def transcription_process(audio_queue, result_queue, partial_result_queue, local_model):
+    """
+    A separate process dedicated to transcribing audio data.
+    """
+    while True:
+        try:
+            audio_chunk = audio_queue.get()
+            if audio_chunk is None:  # Sentinel value to stop the process
+                break
+            result = transcribe(audio_chunk, local_model)
+            if result:
+                # Use partial_result_queue for live updates
+                partial_result_queue.put(result)
+        except Exception as e:
+            traceback.print_exc()
+            # Optionally, put an error message on the result queue
+            # result_queue.put(f"Error: {e}")
+            continue
+
+
 class ResultThread(QThread):
     """
-    A thread class for handling audio recording, transcription, and result processing.
+    A thread class for handling audio recording and managing the transcription process.
     """
 
     statusSignal = pyqtSignal(str)
@@ -25,72 +44,114 @@ class ResultThread(QThread):
         """
         super().__init__()
         self.local_model = local_model
-        self.is_running = True
+        self.is_running = False
         self.audio_queue = Queue()
+        self.result_queue = Queue()
+        self.partial_result_queue = Queue()
+        self.transcription_process = None
 
     def stop(self):
-        """Stop the entire thread execution."""
+        """Stop the entire thread execution and the transcription process."""
         self.is_running = False
+        if self.transcription_process:
+            self.audio_queue.put(None)  # Send sentinel value to stop the process
+            self.transcription_process.join(timeout=2)
+            if self.transcription_process.is_alive():
+                self.transcription_process.terminate()
 
     def run(self):
         """Main execution method for the thread."""
         try:
             self.statusSignal.emit("recording")
             ConfigManager.console_print("Recording...")
+            self.is_running = True
 
-            audio_thread = threading.Thread(target=self._audio_recorder)
-            audio_thread.start()
+            # Start the transcription process
+            self.transcription_process = Process(
+                target=transcription_process,
+                args=(
+                    self.audio_queue,
+                    self.result_queue,
+                    self.partial_result_queue,
+                    self.local_model,
+                ),
+            )
+            self.transcription_process.start()
 
-            transcription_thread = threading.Thread(target=self._transcribe_audio_queue)
-            transcription_thread.start()
+            # Start monitoring for partial results
+            self.start_partial_result_monitoring()
 
-            while self.is_running:
-                time.sleep(0.1)
-
-            audio_thread.join()
-            transcription_thread.join()
+            # Start audio recording in the main thread of this QThread
+            self._audio_recorder()
 
             self.statusSignal.emit("idle")
+            ConfigManager.console_print("Stopped.")
 
         except Exception as e:
             traceback.print_exc()
             self.statusSignal.emit("error")
-            self.resultSignal.emit("")
+        finally:
+            self.resultSignal.emit("")  # Ensure a signal is always emitted on exit
+
+    def start_partial_result_monitoring(self):
+        """Starts a QThread worker to monitor the partial result queue."""
+
+        class PartialResultMonitor(QThread):
+            def __init__(self, queue, signal):
+                super().__init__()
+                self.queue = queue
+                self.signal = signal
+                self.is_running = True
+
+            def run(self):
+                while self.is_running:
+                    try:
+                        result = self.queue.get(timeout=0.1)
+                        self.signal.emit(result)
+                    except Exception:
+                        continue
+
+            def stop(self):
+                self.is_running = False
+
+        self.partial_result_monitor = PartialResultMonitor(
+            self.partial_result_queue, self.partialResultSignal
+        )
+        self.partial_result_monitor.start()
 
     def _audio_recorder(self):
         """
-        A dedicated thread for capturing audio from the microphone.
+        Captures audio from the microphone and puts it into the queue.
         """
         recording_options = ConfigManager.get_config_section("recording_options")
         sample_rate = recording_options.get("sample_rate") or 16000
         frame_duration_ms = 100
         frame_size = int(sample_rate * (frame_duration_ms / 1000.0))
 
-        with sd.InputStream(
-            samplerate=sample_rate,
-            channels=1,
-            dtype="int16",
-            blocksize=frame_size,
-            device=recording_options.get("sound_device"),
-            callback=self._audio_callback,
-        ):
-            while self.is_running:
-                time.sleep(0.1)
+        # Using a context manager for the InputStream
+        try:
+            with sd.InputStream(
+                samplerate=sample_rate,
+                channels=1,
+                dtype="int16",
+                blocksize=frame_size,
+                device=recording_options.get("sound_device"),
+                callback=self._audio_callback,
+            ):
+                while self.is_running:
+                    time.sleep(0.1)
+        except sd.PortAudioError as pae:
+            ConfigManager.console_print(f"PortAudioError in InputStream: {pae}", "error")
+            self.statusSignal.emit("error")
+        except Exception as e:
+            ConfigManager.console_print(f"An unexpected error occurred in _audio_recorder: {e}", "error")
+            self.statusSignal.emit("error")
 
     def _audio_callback(self, indata, frames, time, status):
+        """
+        This callback is called by the sounddevice library for each audio chunk.
+        """
         if status:
-            ConfigManager.console_print(f"Audio callback status: {status}")
-        self.audio_queue.put(indata.copy())
-
-    def _transcribe_audio_queue(self):
-        """
-        A dedicated thread for transcribing audio from the queue.
-        """
-        while self.is_running:
-            try:
-                audio_chunk = self.audio_queue.get(timeout=1.0)
-                result = transcribe(audio_chunk, self.local_model)
-                if result:
-                    self.partialResultSignal.emit(result)
-            except Exception as e:
-                continue
+            ConfigManager.console_print(f"Audio callback status: {status}", "warning")
+        if self.is_running:
+            self.audio_queue.put(indata.copy())

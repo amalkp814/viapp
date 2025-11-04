@@ -104,6 +104,8 @@ class viappApp(QObject):
         self.tray_icon.setContextMenu(tray_menu)
 
     def cleanup(self):
+        if self.result_thread and self.result_thread.isRunning():
+            self.stop_result_thread()
         if self.key_listener:
             self.key_listener.stop()
         if self.input_simulator:
@@ -208,5 +210,8 @@ class viappApp(QObject):
 
 
 if __name__ == "__main__":
+    import multiprocessing
+
+    multiprocessing.freeze_support()
     app = viappApp()
     app.run()
