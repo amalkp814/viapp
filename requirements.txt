@@ -1,3 +1,4 @@
+audioplayer
 pynput
 PyQt5
 numpy<2.0
@@ -5,7 +6,9 @@ sounddevice
 webrtcvad-wheels
 soundfile
 faster-whisper
+openai
 PyYAML
+python-dotenv
 evdev; sys_platform == 'linux'
 onnxruntime==1.17.0
 requests

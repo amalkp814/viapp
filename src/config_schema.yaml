@@ -70,6 +70,14 @@ recording_options:
     value: F9
     type: str
     description: "The keyboard shortcut to activate the recording and transcribing process. Separate keys with a '+'."
+  input_backend:
+    value: auto
+    type: str
+    description: "The input backend to use for detecting key presses. 'auto' will try to use the best available backend."
+    options:
+      - auto
+      - evdev
+      - pynput
   recording_mode:
     value: continuous
     type: str
@@ -115,17 +123,9 @@ post_processing:
     type: bool
     description: "Set to true to convert the transcribed text to lowercase."
   input_method:
-    value: auto
+    value: pynput
     type: str
-    description: "The method to use for simulating keyboard input. 'auto' will use 'ydotool' on Linux if available, otherwise 'pynput'. 'ydotool' is Linux-only."
-    options:
-      - auto
-      - ydotool
-      - pynput
-  word_replacements:
-    value: {}
-    type: dict
-    description: "A dictionary of words to replace in the transcribed text. For example, {'gonna': 'going to', 'smiley face': '😊'}"
+    description: "The method to use for simulating keyboard input."
 
 # Miscellaneous settings
 misc:

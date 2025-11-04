@@ -4,24 +4,22 @@ from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import QApplication, QPushButton, QHBoxLayout, QVBoxLayout, QLabel
 from PyQt5.QtCore import pyqtSignal, Qt
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui.base_window import BaseWindow
-
 
 class MainWindow(BaseWindow):
     openSettings = pyqtSignal()
     startListening = pyqtSignal()
     stopListening = pyqtSignal()
-    stopListeningAndDiscard = pyqtSignal()
     closeApp = pyqtSignal()
 
     def __init__(self):
         """
         Initialize the main window.
         """
-        super().__init__("viapp", 320, 240)
+        super().__init__('viapp', 320, 240)
         self.initMainUI()
-        self.set_state("idle")
+        self.set_state('idle')
 
     def initMainUI(self):
         """
@@ -29,6 +27,16 @@ class MainWindow(BaseWindow):
         """
         # Main vertical layout
         main_v_layout = QVBoxLayout()
+
+        # Top layout for close button
+        top_layout = QHBoxLayout()
+        top_layout.addStretch(1)
+        close_btn = QPushButton('×')
+        close_btn.setFixedSize(25, 25)
+        close_btn.setStyleSheet("background-color: transparent; border: none; font-size: 20px;")
+        close_btn.clicked.connect(self.hide)
+        top_layout.addWidget(close_btn)
+        main_v_layout.addLayout(top_layout)
 
         main_v_layout.addStretch(1)
 
@@ -46,7 +54,7 @@ class MainWindow(BaseWindow):
         # Settings button
         settings_btn = QPushButton()
         settings_btn.setFixedSize(30, 30)
-        settings_btn.setIcon(QIcon(os.path.join("assets", "gear.png")))
+        settings_btn.setIcon(QIcon(os.path.join('assets', 'gear.png')))
         settings_btn.setIconSize(settings_btn.size() * 0.8)
         settings_btn.setStyleSheet("background-color: transparent; border: none;")
         settings_btn.clicked.connect(self.openSettings.emit)
@@ -67,7 +75,7 @@ class MainWindow(BaseWindow):
         bottom_layout = QHBoxLayout()
         bottom_layout.addStretch(1)
         self.status_label = QLabel("Click the button to start recording.")
-        self.status_label.setFont(QFont("Segoe UI", 10))
+        self.status_label.setFont(QFont('Segoe UI', 10))
         bottom_layout.addWidget(self.status_label)
         bottom_layout.addStretch(1)
         main_v_layout.addLayout(bottom_layout)
@@ -76,23 +84,17 @@ class MainWindow(BaseWindow):
 
     def set_state(self, state):
         self.state = state
-        if state == "idle":
-            self.central_button.setIcon(QIcon(os.path.join("assets", "microphone.png")))
-            self.central_button.setStyleSheet(
-                "background-color: #cccccc; border-radius: 60px;"
-            )
+        if state == 'idle':
+            self.central_button.setIcon(QIcon(os.path.join('assets', 'microphone.png')))
+            self.central_button.setStyleSheet("background-color: #cccccc; border-radius: 60px;")
             self.status_label.setText("Click the button to start recording.")
-        elif state == "recording":
-            self.central_button.setIcon(QIcon(os.path.join("assets", "microphone.png")))
-            self.central_button.setStyleSheet(
-                "background-color: #3498db; border-radius: 60px;"
-            )
+        elif state == 'recording':
+            self.central_button.setIcon(QIcon(os.path.join('assets', 'microphone.png')))
+            self.central_button.setStyleSheet("background-color: #3498db; border-radius: 60px;")
             self.status_label.setText("Recording...")
-        elif state == "transcribing":
-            self.central_button.setIcon(QIcon(os.path.join("assets", "pencil.png")))
-            self.central_button.setStyleSheet(
-                "background-color: #f1c40f; border-radius: 60px;"
-            )
+        elif state == 'transcribing':
+            self.central_button.setIcon(QIcon(os.path.join('assets', 'pencil.png')))
+            self.central_button.setStyleSheet("background-color: #f1c40f; border-radius: 60px;")
             self.status_label.setText("Transcribing...")
 
     def update_transcription_label(self, text):
@@ -100,24 +102,20 @@ class MainWindow(BaseWindow):
         self.status_label.setText(" ".join(words[-5:]))
 
     def on_central_button_clicked(self):
-        if self.state == "idle":
+        if self.state == 'idle':
             self.startListening.emit()
-            self.set_state("recording")
-        elif self.state == "recording":
+            self.set_state('recording')
+        elif self.state == 'recording':
             self.stopListening.emit()
-            self.set_state("transcribing")
+            self.set_state('transcribing')
 
     def closeEvent(self, event):
         """
-        Override the close event to hide the window instead of closing it.
+        Close the application when the main window is closed.
         """
-        if self.state == "recording":
-            self.stopListeningAndDiscard.emit()
-        event.ignore()
-        self.hide()
+        self.closeApp.emit()
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

@@ -10,27 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented live transcription.
 - Set F9 as the default global shortcut.
 - Added new icons for the application.
-- Added `ydotool` as an alternative input simulation method on Linux.
-- Added an `auto` input method that uses `ydotool` on Linux if available, otherwise `pynput`.
-- Added a `word_replacements` option to the configuration file.
 
 ### Changed
 - Renamed the project from "WhisperWriter" to "viapp".
 - The application now uses the `small.en` model by default.
 - Increased VAD aggressiveness for faster transcriptions.
-- The main window now minimizes to the system tray instead of closing.
-- The system tray menu is now dynamic, showing "Start/Stop Recording" based on the application's state.
-
-### Fixed
-- The application now handles `PortAudioError` gracefully by providing a list of available audio devices and instructions on how to configure them.
-- The F9 hotkey and all recording modes now work correctly.
 
 ### Removed
 - Removed all API-based transcription functionality.
 - Removed the old status window.
 - Removed the `audioplayer` dependency and related code.
 - Removed the `dotenv` dependency and related code.
-- Removed the `openai` dependency and related code.
 
 ## [1.0.1] - 2024-01-28
 ### Added

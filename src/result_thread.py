@@ -1,6 +1,8 @@
 import time
 import traceback
+import numpy as np
 import sounddevice as sd
+import webrtcvad
 from PyQt5.QtCore import QThread, pyqtSignal
 from multiprocessing import Process, Queue
 
@@ -11,14 +13,15 @@ from utils import ConfigManager
 def transcription_process(audio_queue, result_queue, partial_result_queue):
     """
     A separate process dedicated to transcribing audio data.
-    Initializes its own transcription model.
+    Initializes its own configuration and transcription model.
     """
+    ConfigManager.initialize()
     local_model = create_local_model()
 
     while True:
         try:
             audio_chunk = audio_queue.get()
-            if audio_chunk is None:  # Sentinel value to stop the process
+            if audio_chunk is None:
                 break
             result = transcribe(audio_chunk, local_model)
             if result:
@@ -29,18 +32,11 @@ def transcription_process(audio_queue, result_queue, partial_result_queue):
 
 
 class ResultThread(QThread):
-    """
-    A thread class for handling audio recording and managing the transcription process.
-    """
-
     statusSignal = pyqtSignal(str)
     resultSignal = pyqtSignal(str)
     partialResultSignal = pyqtSignal(str)
 
     def __init__(self):
-        """
-        Initialize the ResultThread.
-        """
         super().__init__()
         self.is_running = False
         self.audio_queue = Queue()
@@ -48,10 +44,13 @@ class ResultThread(QThread):
         self.partial_result_queue = Queue()
         self.transcription_process = None
         self.partial_result_monitor = None
+        self.audio_stream = None
 
     def stop(self):
-        """Stop the entire thread execution and the transcription process."""
         self.is_running = False
+        if self.audio_stream:
+            self.audio_stream.stop()
+            self.audio_stream.close()
         if self.partial_result_monitor:
             self.partial_result_monitor.stop()
 
@@ -60,39 +59,32 @@ class ResultThread(QThread):
             self.transcription_process.join(timeout=2)
             if self.transcription_process.is_alive():
                 self.transcription_process.terminate()
+        self.wait()
 
     def run(self):
-        """Main execution method for the thread."""
         try:
+            self.is_running = True
             self.statusSignal.emit("recording")
             ConfigManager.console_print("Recording...")
-            self.is_running = True
 
             self.transcription_process = Process(
                 target=transcription_process,
-                args=(
-                    self.audio_queue,
-                    self.result_queue,
-                    self.partial_result_queue,
-                ),
+                args=(self.audio_queue, self.result_queue, self.partial_result_queue),
             )
             self.transcription_process.start()
-
             self.start_partial_result_monitoring()
-            self._audio_recorder()
 
-            self.statusSignal.emit("idle")
-            ConfigManager.console_print("Stopped.")
+            self._process_audio()
 
         except Exception as e:
             traceback.print_exc()
             self.statusSignal.emit("error")
         finally:
             self.resultSignal.emit("")
+            self.statusSignal.emit("idle")
+            ConfigManager.console_print("Stopped.")
 
     def start_partial_result_monitoring(self):
-        """Starts a QThread worker to monitor the partial result queue."""
-
         class PartialResultMonitor(QThread):
             def __init__(self, queue, signal):
                 super().__init__()
@@ -117,42 +109,58 @@ class ResultThread(QThread):
         )
         self.partial_result_monitor.start()
 
-    def _audio_recorder(self):
-        """
-        Captures audio from the microphone and puts it into the queue.
-        """
+    def _process_audio(self):
         recording_options = ConfigManager.get_config_section("recording_options")
         sample_rate = recording_options.get("sample_rate") or 16000
-        frame_duration_ms = 100
+        frame_duration_ms = 30
         frame_size = int(sample_rate * (frame_duration_ms / 1000.0))
+        silence_duration_ms = recording_options.get("silence_duration") or 900
+        silence_frames = int(silence_duration_ms / frame_duration_ms)
 
-        try:
-            with sd.InputStream(
-                samplerate=sample_rate,
-                channels=1,
-                dtype="int16",
-                blocksize=frame_size,
-                device=recording_options.get("sound_device"),
-                callback=self._audio_callback,
-            ):
-                while self.is_running:
-                    time.sleep(0.1)
-        except sd.PortAudioError as pae:
-            ConfigManager.console_print(
-                f"PortAudioError in InputStream: {pae}", "error"
-            )
-            self.statusSignal.emit("error")
-        except Exception as e:
-            ConfigManager.console_print(
-                f"An unexpected error occurred in _audio_recorder: {e}", "error"
-            )
-            self.statusSignal.emit("error")
+        vad = webrtcvad.Vad(3)
+        speech_detected = False
+        silent_frame_count = 0
+        recording = []
 
-    def _audio_callback(self, indata, frames, time, status):
-        """
-        This callback is called by the sounddevice library for each audio chunk.
-        """
-        if status:
-            ConfigManager.console_print(f"Audio callback status: {status}", "warning")
-        if self.is_running:
-            self.audio_queue.put(indata.copy())
+        raw_audio_queue = Queue()
+
+        def audio_callback(indata, frames, time, status):
+            if status:
+                ConfigManager.console_print(f"Audio callback status: {status}", "warning")
+            if self.is_running:
+                raw_audio_queue.put(indata.copy())
+
+        self.audio_stream = sd.InputStream(
+            samplerate=sample_rate,
+            channels=1,
+            dtype="int16",
+            blocksize=frame_size,
+            device=recording_options.get("sound_device"),
+            callback=audio_callback,
+        )
+        self.audio_stream.start()
+
+        while self.is_running:
+            try:
+                frame_data = raw_audio_queue.get(timeout=0.1)
+                frame = np.frombuffer(frame_data, dtype=np.int16)
+                is_speech = vad.is_speech(frame.tobytes(), sample_rate)
+
+                if is_speech:
+                    silent_frame_count = 0
+                    if not speech_detected:
+                        speech_detected = True
+                    recording.extend(frame)
+                elif speech_detected:
+                    silent_frame_count += 1
+
+                if speech_detected and silent_frame_count > silence_frames:
+                    audio_data = np.array(recording, dtype=np.int16)
+                    self.audio_queue.put(audio_data)
+                    recording = []
+                    speech_detected = False
+            except Exception:
+                continue
+
+        if recording:
+            self.audio_queue.put(np.array(recording, dtype=np.int16))

@@ -133,19 +133,10 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 - `remove_trailing_period`: Set to `true` to remove the trailing period from the transcribed text. (Default: `false`)
 - `add_trailing_space`: Set to `true` to add a space to the end of the transcribed text. (Default: `true`)
 - `remove_capitalization`: Set to `true` to convert the transcribed text to lowercase. (Default: `false`)
-- `input_method`: The method to use for simulating keyboard input. The `auto` option will use `ydotool` on Linux if available, otherwise `pynput`. `ydotool` is a Linux-only tool that can provide more reliable input simulation. If you are on Linux, it is recommended to install `ydotool` and use this option. (Default: `auto`)
-- `word_replacements`: A dictionary of words to replace in the transcribed text. For example, `{"gonna": "going to", "smiley face": "😊"}`. (Default: `{}`)
+- `input_method`: The method to use for simulating keyboard input. (Default: `pynput`)
 
 #### Miscellaneous Options
 - `print_to_terminal`: Set to `true` to print the script status and transcribed text to the terminal. (Default: `true`)
-
-## System Tray Menu
-
-The application has a system tray icon with a dynamic context menu:
-- **viapp Main Menu**: Shows the main window.
-- **Start/Stop Recording**: Starts or stops the recording.
-- **Settings**: Opens the settings window.
-- **Exit**: Exits the application.
 - `noise_on_completion`: Set to `true` to play a noise after the transcription has been typed out. (Default: `false`)
 
 If any of the configuration options are invalid or not provided, the program will use the default values.
