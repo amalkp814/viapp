@@ -19,7 +19,7 @@ class MainWindow(BaseWindow):
         """
         Initialize the main window.
         """
-        super().__init__("viapp", 320, 240)
+        super().__init__("viapp", 240, 240)
         self.initMainUI()
         self.set_state("idle")
 
@@ -42,6 +42,7 @@ class MainWindow(BaseWindow):
         self.central_button.setIconSize(self.central_button.size() * 0.5)
         self.central_button.clicked.connect(self.on_central_button_clicked)
         middle_layout.addWidget(self.central_button)
+
 
         # Settings button
         settings_btn = QPushButton()
@@ -66,7 +67,7 @@ class MainWindow(BaseWindow):
         # Bottom layout for status label
         bottom_layout = QHBoxLayout()
         bottom_layout.addStretch(1)
-        self.status_label = QLabel("Click the button to start recording.")
+        self.status_label = QLabel("Click to start recording.")
         self.status_label.setFont(QFont("Segoe UI", 10))
         bottom_layout.addWidget(self.status_label)
         bottom_layout.addStretch(1)
@@ -77,21 +78,21 @@ class MainWindow(BaseWindow):
     def set_state(self, state):
         self.state = state
         if state == "idle":
-            self.central_button.setIcon(QIcon(os.path.join("assets", "microphone.png")))
+            self.central_button.setIcon(QIcon(os.path.join("assets", "mic-idle.png")))
             self.central_button.setStyleSheet(
-                "background-color: #cccccc; border-radius: 60px;"
+                "background-color: #e1e1e1; border-radius: none;"
             )
             self.status_label.setText("Click the button to start recording.")
         elif state == "recording":
-            self.central_button.setIcon(QIcon(os.path.join("assets", "microphone.png")))
+            self.central_button.setIcon(QIcon(os.path.join("assets", "mic-rec.png")))
             self.central_button.setStyleSheet(
-                "background-color: #3498db; border-radius: 60px;"
+                "background-color: #e1e1e1; border-radius: none;"
             )
             self.status_label.setText("Recording...")
         elif state == "transcribing":
-            self.central_button.setIcon(QIcon(os.path.join("assets", "pencil.png")))
+            self.central_button.setIcon(QIcon(os.path.join("assets", "mic-tran.png")))
             self.central_button.setStyleSheet(
-                "background-color: #f1c40f; border-radius: 60px;"
+                "background-color: #e1e1e1; border-radius: none;"
             )
             self.status_label.setText("Transcribing...")
 
@@ -112,7 +113,7 @@ class MainWindow(BaseWindow):
         Override the close event to hide the window instead of closing it.
         """
         if self.state == "recording":
-            self.stopListeningAndDiscard.emit()
+            self.stopListening.emit()
         event.ignore()
         self.hide()
 

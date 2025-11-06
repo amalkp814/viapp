@@ -31,7 +31,7 @@ class SettingsWindow(BaseWindow):
 
     def __init__(self):
         """Initialize the settings window."""
-        super().__init__("Settings", 700, 700)
+        super().__init__("Settings", 333, 500)
         self.schema = ConfigManager.get_schema()
         self.init_settings_ui()
 
