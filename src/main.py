@@ -80,24 +80,26 @@ class viappApp(QObject):
         """
         tray_menu = QMenu()
 
-        show_action = QAction("viapp Main Menu", self.app)
+        show_action = QAction(QIcon(os.path.join("assets", "v-logo.png")), "viapp", self.app)
         show_action.triggered.connect(self.main_window.show)
         tray_menu.addAction(show_action)
 
         if state == "idle":
-            start_action = QAction("Start Recording", self.app)
+            start_action = QAction(QIcon(os.path.join("assets", "mic-rec.png")), "Start", self.app)
+            start_action.triggered.connect(self.main_window.show)
             start_action.triggered.connect(self.on_activation)
             tray_menu.addAction(start_action)
         else:
-            stop_action = QAction("Stop Recording", self.app)
+            stop_action = QAction(QIcon(os.path.join("assets", "mic-idle.png")), "Stop", self.app)
+            stop_action.triggered.connect(self.main_window.hide)
             stop_action.triggered.connect(self.on_activation)
             tray_menu.addAction(stop_action)
 
-        settings_action = QAction("Settings", self.app)
+        settings_action = QAction(QIcon(os.path.join("assets", "gear.png")), "Settings", self.app)
         settings_action.triggered.connect(self.settings_window.show)
         tray_menu.addAction(settings_action)
 
-        exit_action = QAction("Exit", self.app)
+        exit_action = QAction(QIcon(os.path.join("assets", "exit.png")), "Exit", self.app)
         exit_action.triggered.connect(self.exit_app)
         tray_menu.addAction(exit_action)
 
