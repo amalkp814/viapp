@@ -80,19 +80,19 @@ class MainWindow(BaseWindow):
         if state == "idle":
             self.central_button.setIcon(QIcon(os.path.join("assets", "mic-idle.png")))
             self.central_button.setStyleSheet(
-                "background-color: #e1e1e1; border-radius: none;"
+                "background-color: transparent; border: none;"
             )
             self.status_label.setText("Click the button to start recording.")
         elif state == "recording":
             self.central_button.setIcon(QIcon(os.path.join("assets", "mic-rec.png")))
             self.central_button.setStyleSheet(
-                "background-color: #e1e1e1; border-radius: none;"
+                "background-color: transparent; border: none;"
             )
             self.status_label.setText("Recording...")
         elif state == "transcribing":
             self.central_button.setIcon(QIcon(os.path.join("assets", "mic-tran.png")))
             self.central_button.setStyleSheet(
-                "background-color: #e1e1e1; border-radius: none;"
+                "background-color: transparent; border: none;"
             )
             self.status_label.setText("Transcribing...")
 
