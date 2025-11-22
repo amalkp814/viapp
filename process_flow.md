@@ -48,7 +48,7 @@ graph TD
 
 ## 2. Audio Processing & VAD Logic
 
-This flowchart details the `ResultThread` loop. **Note:** The current implementation discards silent frames during active speech until the silence threshold is reached.
+This flowchart details the `ResultThread` loop. **Note:** The current implementation now buffers silent frames during active speech to preserve natural prosody.
 
 ```mermaid
 flowchart TD
@@ -71,8 +71,9 @@ flowchart TD
         CheckActive -- Yes --> IncSil[Increment Silence Counter]
         IncSil --> CheckThresh{Silence > Threshold?}
         
-        %% Current Code Behavior: Silent frames are NOT buffered
-        CheckThresh -- No --> CheckRun
+        %% New Behavior: Silent frames ARE buffered
+        CheckThresh -- No --> BufferSil[Append Silence to Buffer]
+        BufferSil --> CheckRun
         CheckThresh -- Yes --> Finalize[Finalize Chunk]
     end
     
@@ -87,7 +88,7 @@ flowchart TD
 
 ## 3. Transcription Sequence
 
-This sequence diagram groups participants by layer (UI, Logic, Core) to clearly show the interaction boundaries.
+This sequence diagram groups participants by layer (UI, Logic, Core) to clearly show the interaction boundaries, including the **asynchronous input queue**.
 
 ```mermaid
 sequenceDiagram
@@ -97,6 +98,7 @@ sequenceDiagram
     participant Thread as ResultThread
     participant Model as WhisperModel
     participant Input as InputSimulator
+    participant Worker as InputWorker
 
     Note over User, UI: **Activation Phase**
     User->>App: Hotkey Pressed (Ctrl+Alt+K)
@@ -125,11 +127,23 @@ sequenceDiagram
     
     Thread->>App: resultSignal("Transcribed Text")
     App->>Input: typewrite("Transcribed Text")
-    activate Input
-    Input->>User: Simulate Keystrokes
-    deactivate Input
     
-    Thread->>App: statusSignal("idle")
+    Note right of Input: **Non-Blocking Queue**
+    Input->>Worker: Queue.put(text)
+    Input-->>App: Return immediately
+    
+    activate Worker
+    Worker->>Input: typingStarted.emit()
+    Input->>App: Signal("typing")
+    App->>UI: set_state("typing")
+    
+    loop Character by Character
+        Worker->>User: Simulate Keystrokes
+    end
+    
+    Worker->>Input: typingFinished.emit()
+    deactivate Worker
+    Input->>App: Signal("idle")
     App->>UI: set_state("idle")
 ```
 

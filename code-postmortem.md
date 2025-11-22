@@ -63,9 +63,12 @@ Wraps the `faster-whisper` library for inference.
 Handles the final output of the text.
 
 - **Factory Pattern**: The `InputSimulator` class acts as a factory, returning either `_PynputSimulator` or `_YdotoolSimulator` based on the OS and configuration.
+- **Architecture**:
+  - **Threaded Queue**: Implements a producer-consumer pattern using a `queue.Queue` and a background worker thread. This ensures that `typewrite` calls are non-blocking and that multiple transcriptions are typed sequentially without overlapping.
+  - **Signals**: Emits `typingStarted` and `typingFinished` signals to keep the UI synchronized with the background typing activity.
 - **Strategies**:
-  - **`_PynputSimulator`**: Uses `pynput` to simulate key presses. Works on Windows, macOS, and X11 Linux.
-  - **`_YdotoolSimulator`**: Uses `ydotool` (a command-line utility) for Wayland support on Linux, where `pynput` often fails.
+  - **`_PynputSimulator`**: Uses `pynput` to simulate key presses. Includes a "force flush" mechanism (simulating a dummy key release) to ensure OS buffers are cleared.
+  - **`_YdotoolSimulator`**: Uses `ydotool` (a command-line utility) for Wayland support on Linux.
 - **Text Processing**: Before typing, it runs regex-based word replacements (e.g., replacing "comma" with ","), defined in the user config.
 
 ### 3.5. Global Key Listener (`src/key_listener.py`)
@@ -109,7 +112,8 @@ Handles the final output of the text.
     - `ResultThread` reads audio chunks.
     - `webrtcvad` detects speech.
     - Silence counter resets on speech.
-    - When silence > `silence_duration`, the chunk is finalized.
+    - **Buffering**: Silent frames within active speech are now buffered to preserve natural pauses.
+    - When silence > `silence_duration` (dynamic threshold), the chunk is finalized.
 
 4. **Transcription**:
     - `ResultThread` passes the audio chunk to `transcription.transcribe`.
@@ -118,8 +122,10 @@ Handles the final output of the text.
 
 5. **Output**:
     - `ResultThread` emits `resultSignal(text)`.
-    - `viappApp` receives signal -> calls `input_simulator.typewrite(text)`.
-    - `InputSimulator` simulates keystrokes into the active window.
+    - `viappApp` calls `input_simulator.typewrite(text)`.
+    - **Queueing**: Text is added to the input queue (non-blocking).
+    - **Typing**: Background worker picks up text, emits `typingStarted` (UI shows "Typing..."), and simulates keystrokes.
+    - **Completion**: Worker emits `typingFinished` (UI returns to "Idle").
 
 ## 5. Configuration Files
 

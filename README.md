@@ -9,6 +9,7 @@
 viapp is a small speech-to-text app that uses a local, high-performance Whisper model to auto-transcribe recordings from a user's microphone to the active window.
 
 Once started, the script runs in the background and waits for a keyboard shortcut to be pressed (`F9` by default). When the shortcut is pressed, the app starts recording from your microphone. There are four recording modes to choose from:
+
 - `continuous` (default): Recording will stop after a long enough pause in your speech. The app will transcribe the text and then start recording again. To stop listening, press the keyboard shortcut again.
 - `voice_activity_detection`: Recording will stop after a long enough pause in your speech. Recording will not start until the keyboard shortcut is pressed again.
 - `press_to_toggle` Recording will stop when the keyboard shortcut is pressed again. Recording will not start until the keyboard shortcut is pressed again.
@@ -19,6 +20,7 @@ You can change the keyboard shortcut (`activation_key`) and recording mode in th
 ## Getting Started
 
 ### Prerequisites
+
 Before you can run this app, you'll need to have the following software installed:
 
 - Git: [https://git-scm.com/downloads](https://git-scm.com/downloads)
@@ -61,16 +63,17 @@ Purfview's [whisper-standalone-win](https://github.com/Purfview/whisper-standalo
 </details>
 
 ### Installation
+
 To set up and run the project, follow these steps:
 
-#### 1. Clone the repository:
+#### 1. Clone the repository
 
 ```
-git clone https://github.com/savbell/viapp
+git clone https://github.com/amalkp814/viapp
 cd viapp
 ```
 
-#### 2. Create a virtual environment and activate it:
+#### 2. Create a virtual environment and activate it
 
 ```
 python -m venv venv
@@ -82,19 +85,20 @@ source venv/bin/activate
 venv\Scripts\activate
 ```
 
-#### 3. Install the required packages:
+#### 3. Install the required packages
 
 ```
 pip install -r requirements.txt
 ```
 
-#### 4. Run the Python code:
+#### 4. Run the Python code
 
 ```
 python run.py
 ```
 
-#### 5. Configure and start viapp:
+#### 5. Configure and start viapp
+
 On first run, a Settings window should appear. Once configured and saved, the main window will open. Press the activation key (`F9` by default) to start recording and transcribing to the active window.
 
 ### Configuration Options
@@ -106,6 +110,7 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 </p>
 
 #### Model Options
+
 - `common`: Options common to the local model.
   - `language`: The language code for the transcription in [ISO-639-1 format](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes). (Default: `null`)
   - `temperature`: Controls the randomness of the transcription output. Lower values make the output more focused and deterministic. (Default: `0.0`)
@@ -120,6 +125,7 @@ viapp uses a configuration file to customize its behaviour. To set up the config
   - `model_path`: The path to the local Whisper model. If not specified, the default model will be downloaded. (Default: `null`)
 
 #### Recording Options
+
 - `activation_key`: The keyboard shortcut to activate the recording and transcribing process. Separate keys with a `+`. (Default: `F9`)
 - `input_backend`: The input backend to use for detecting key presses. `auto` will try to use the best available backend. (Default: `auto`)
 - `recording_mode`: The recording mode to use. Options include `continuous` (auto-restart recording after pause in speech until activation key is pressed again), `voice_activity_detection` (stop recording after pause in speech), `press_to_toggle` (stop recording when activation key is pressed again), `hold_to_record` (stop recording when activation key is released). (Default: `continuous`)
@@ -129,6 +135,7 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 - `min_duration`: The minimum duration in milliseconds for a recording to be processed. Recordings shorter than this will be discarded. (Default: `100`)
 
 #### Post-processing Options
+
 - `writing_key_press_delay`: The delay in seconds between each key press when writing the transcribed text. (Default: `0.005`)
 - `remove_trailing_period`: Set to `true` to remove the trailing period from the transcribed text. (Default: `false`)
 - `add_trailing_space`: Set to `true` to add a space to the end of the transcribed text. (Default: `true`)
@@ -137,11 +144,13 @@ viapp uses a configuration file to customize its behaviour. To set up the config
 - `word_replacements`: A dictionary of words to replace in the transcribed text. For example, `{"gonna": "going to", "smiley face": "😊"}`. (Default: `{}`)
 
 #### Miscellaneous Options
+
 - `print_to_terminal`: Set to `true` to print the script status and transcribed text to the terminal. (Default: `true`)
 
 ## System Tray Menu
 
 The application has a system tray icon with a dynamic context menu:
+
 - **viapp Main Menu**: Shows the main window.
 - **Start/Stop Recording**: Starts or stops the recording.
 - **Settings**: Opens the settings window.
@@ -155,12 +164,15 @@ If any of the configuration options are invalid or not provided, the program wil
 You can see all reported issues and their current status in our [Issue Tracker](https://github.com/savbell/viapp/issues). If you encounter a problem, please [open a new issue](https://github.com/savbell/viapp/issues/new) with a detailed description and reproduction steps, if possible.
 
 ## Roadmap
+
 Below are features I am planning to add in the near future:
+
 - [ ] Additional post-processing options:
-  - [ ] Simple word replacement (e.g. "gonna" -> "going to" or "smiley face" -> "😊")
+  - [x] Simple word replacement (e.g. "gonna" -> "going to" or "smiley face" -> "😊")
 - [ ] Creating standalone executable file
 
 Below are features not currently planned:
+
 - [ ] Pipelining audio files
 
 Implemented features can be found in the [CHANGELOG](CHANGELOG.md).
