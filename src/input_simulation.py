@@ -7,11 +7,45 @@ from pynput.keyboard import Controller as PynputController
 from utils import ConfigManager
 
 
+import threading
+from queue import Queue
+
 class _BaseSimulator:
     """
     A base class for input simulators that handles word replacements.
     Provides common functionality for text preprocessing before typing.
     """
+    def __init__(self):
+        self.input_queue = Queue()
+        self.worker_thread = threading.Thread(target=self._input_worker, daemon=True)
+        self.worker_thread.start()
+
+    def typewrite(self, text):
+        """
+        Add text to the input queue to be typed by the worker thread.
+        This method is non-blocking.
+        """
+        self.input_queue.put(text)
+
+    def _input_worker(self):
+        """
+        Worker thread that processes the input queue and types text sequentially.
+        """
+        while True:
+            text = self.input_queue.get()
+            try:
+                self._do_typewrite(text)
+            except Exception as e:
+                ConfigManager.console_print(f"Input error: {e}")
+            finally:
+                self.input_queue.task_done()
+
+    def _do_typewrite(self, text):
+        """
+        Abstract method for the actual typing logic.
+        Must be implemented by subclasses.
+        """
+        raise NotImplementedError
 
     def _perform_word_replacements(self, text):
         """
@@ -43,9 +77,10 @@ class _PynputSimulator(_BaseSimulator):
     """
 
     def __init__(self):
+        super().__init__()
         self.keyboard = PynputController()
 
-    def typewrite(self, text):
+    def _do_typewrite(self, text):
         """
         Simulate typing the given text character by character.
         
@@ -82,8 +117,10 @@ class _YdotoolSimulator(_BaseSimulator):
     A class to simulate keyboard input using ydotool.
     This is a Linux-specific simulator that works on Wayland.
     """
+    def __init__(self):
+        super().__init__()
 
-    def typewrite(self, text):
+    def _do_typewrite(self, text):
         """
         Simulate typing the given text using ydotool.
         
