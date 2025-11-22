@@ -26,6 +26,10 @@ from utils import ConfigManager
 
 
 class SettingsWindow(BaseWindow):
+    """
+    A window for configuring application settings.
+    Dynamically generates UI elements based on the configuration schema.
+    """
     settings_closed = pyqtSignal()
     settings_saved = pyqtSignal()
 
@@ -36,6 +40,9 @@ class SettingsWindow(BaseWindow):
         self.init_settings_ui()
 
     def apply_stylesheet(self):
+        """
+        Apply custom CSS stylesheet to the settings window widgets.
+        """
         self.setStyleSheet(
             """
             QTabWidget::pane {
@@ -114,7 +121,16 @@ class SettingsWindow(BaseWindow):
         self.main_layout.addWidget(save_button)
 
     def add_setting_widget(self, layout, key, meta, category, sub_category=None):
-        """Add a setting widget to the layout."""
+        """
+        Add a setting widget to the layout.
+        
+        Args:
+            layout (QLayout): The layout to add the widget to.
+            key (str): The setting key.
+            meta (dict): Metadata for the setting (type, description, etc.).
+            category (str): The setting category.
+            sub_category (str, optional): The setting sub-category.
+        """
         item_layout = QHBoxLayout()
         label = QLabel(f"{key.replace('_', ' ').capitalize()}:")
         label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -202,6 +218,7 @@ class SettingsWindow(BaseWindow):
         return widget
 
     def create_help_button(self, description):
+        """Create a help button with a tooltip and click action."""
         help_button = QToolButton()
         help_button.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
         help_button.setAutoRaise(True)
@@ -212,6 +229,7 @@ class SettingsWindow(BaseWindow):
         return help_button
 
     def get_config_value(self, category, sub_category, key, meta):
+        """Retrieve the current configuration value for a setting."""
         if sub_category:
             return (
                 ConfigManager.get_config_value(category, sub_category, key)
@@ -220,6 +238,7 @@ class SettingsWindow(BaseWindow):
         return ConfigManager.get_config_value(category, key) or meta["value"]
 
     def browse_model_path(self, widget):
+        """Open a file dialog to select a model file."""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Select Whisper Model File", "", "Model Files (*.bin);;All Files (*)"
         )
@@ -244,6 +263,7 @@ class SettingsWindow(BaseWindow):
         self.close()
 
     def save_setting(self, widget, category, sub_category, key, meta):
+        """Save a single setting from its widget value."""
         value = self.get_widget_value_typed(widget, meta.get("type"))
         if sub_category:
             ConfigManager.set_config_value(value, category, sub_category, key)

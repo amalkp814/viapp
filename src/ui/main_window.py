@@ -9,6 +9,10 @@ from ui.base_window import BaseWindow
 
 
 class MainWindow(BaseWindow):
+    """
+    The main application window.
+    Displays the recording status and controls.
+    """
     openSettings = pyqtSignal()
     startListening = pyqtSignal()
     stopListening = pyqtSignal()
@@ -18,6 +22,7 @@ class MainWindow(BaseWindow):
     def __init__(self):
         """
         Initialize the main window.
+        Sets up the UI and initial state.
         """
         super().__init__("viapp", 240, 240)
         self.initMainUI()
@@ -25,7 +30,8 @@ class MainWindow(BaseWindow):
 
     def initMainUI(self):
         """
-        Initialize the main user interface.
+        Initialize the main user interface elements.
+        Creates the central button, settings button, and status label.
         """
         # Main vertical layout
         main_v_layout = QVBoxLayout()
@@ -36,7 +42,7 @@ class MainWindow(BaseWindow):
         middle_layout = QHBoxLayout()
         middle_layout.addStretch(1)
 
-        # Central button
+        # Central button for recording control
         self.central_button = QPushButton()
         self.central_button.setFixedSize(120, 120)
         self.central_button.setIconSize(self.central_button.size() * 0.5)
@@ -76,6 +82,12 @@ class MainWindow(BaseWindow):
         self.main_layout.addLayout(main_v_layout)
 
     def set_state(self, state):
+        """
+        Update the UI based on the application state.
+        
+        Args:
+            state (str): The new state ('idle', 'recording', 'transcribing').
+        """
         self.state = state
         if state == "idle":
             self.central_button.setIcon(QIcon(os.path.join("assets", "mic-idle.png")))
@@ -97,10 +109,21 @@ class MainWindow(BaseWindow):
             self.status_label.setText("Transcribing...")
 
     def update_transcription_label(self, text):
+        """
+        Update the status label with partial transcription text.
+        Shows the last 5 words to keep the UI clean.
+        
+        Args:
+            text (str): The transcription text.
+        """
         words = text.split()
         self.status_label.setText(" ".join(words[-5:]))
 
     def on_central_button_clicked(self):
+        """
+        Handle clicks on the central button.
+        Toggles between recording and transcribing states.
+        """
         if self.state == "idle":
             self.startListening.emit()
             self.set_state("recording")
@@ -111,6 +134,7 @@ class MainWindow(BaseWindow):
     def closeEvent(self, event):
         """
         Override the close event to hide the window instead of closing it.
+        Stops recording if active.
         """
         if self.state == "recording":
             self.stopListening.emit()

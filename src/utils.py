@@ -3,6 +3,10 @@ import os
 
 
 class ConfigManager:
+    """
+    Singleton class for managing application configuration.
+    Handles loading, saving, and accessing configuration settings.
+    """
     _instance = None
 
     def __init__(self):
@@ -12,7 +16,13 @@ class ConfigManager:
 
     @classmethod
     def initialize(cls, schema_path=None):
-        """Initialize the ConfigManager with the given schema path."""
+        """
+        Initialize the ConfigManager with the given schema path.
+        Loads the schema, default config, and user config.
+        
+        Args:
+            schema_path (str, optional): Path to the configuration schema file.
+        """
         if cls._instance is None:
             cls._instance = cls()
             cls._instance.schema = cls._instance.load_config_schema(schema_path)
@@ -21,14 +31,27 @@ class ConfigManager:
 
     @classmethod
     def get_schema(cls):
-        """Get the configuration schema."""
+        """
+        Get the configuration schema.
+        
+        Returns:
+            dict: The configuration schema.
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
         return cls._instance.schema
 
     @classmethod
     def get_config_section(cls, *keys):
-        """Get a specific section of the configuration."""
+        """
+        Get a specific section of the configuration.
+        
+        Args:
+            *keys: Keys to traverse the configuration dictionary.
+            
+        Returns:
+            dict: The requested configuration section.
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
 
@@ -42,7 +65,15 @@ class ConfigManager:
 
     @classmethod
     def get_config_value(cls, *keys):
-        """Get a specific configuration value using nested keys."""
+        """
+        Get a specific configuration value using nested keys.
+        
+        Args:
+            *keys: Keys to traverse the configuration dictionary.
+            
+        Returns:
+            Any: The requested configuration value, or None if not found.
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
 
@@ -56,7 +87,13 @@ class ConfigManager:
 
     @classmethod
     def set_config_value(cls, value, *keys):
-        """Set a specific configuration value using nested keys."""
+        """
+        Set a specific configuration value using nested keys.
+        
+        Args:
+            value: The value to set.
+            *keys: Keys to traverse the configuration dictionary.
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
 
@@ -71,7 +108,15 @@ class ConfigManager:
 
     @staticmethod
     def load_config_schema(schema_path=None):
-        """Load the configuration schema from a YAML file."""
+        """
+        Load the configuration schema from a YAML file.
+        
+        Args:
+            schema_path (str, optional): Path to the schema file.
+            
+        Returns:
+            dict: The loaded schema.
+        """
         if schema_path is None:
             base_dir = os.path.dirname(os.path.abspath(__file__))
             schema_path = os.path.join(base_dir, "config_schema.yaml")
@@ -81,7 +126,12 @@ class ConfigManager:
         return schema
 
     def load_default_config(self):
-        """Load default configuration values from the schema."""
+        """
+        Load default configuration values from the schema.
+        
+        Returns:
+            dict: The default configuration.
+        """
 
         def extract_value(item):
             if isinstance(item, dict):
@@ -97,7 +147,12 @@ class ConfigManager:
         return config
 
     def load_user_config(self, config_path=os.path.join("src", "config.yaml")):
-        """Load user configuration and merge with default config."""
+        """
+        Load user configuration and merge with default config.
+        
+        Args:
+            config_path (str): Path to the user configuration file.
+        """
 
         def deep_update(source, overrides):
             for key, value in overrides.items():
@@ -116,7 +171,12 @@ class ConfigManager:
 
     @classmethod
     def save_config(cls, config_path=os.path.join("src", "config.yaml")):
-        """Save the current configuration to a YAML file."""
+        """
+        Save the current configuration to a YAML file.
+        
+        Args:
+            config_path (str): Path to save the configuration file.
+        """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
         with open(config_path, "w") as file:
@@ -126,6 +186,7 @@ class ConfigManager:
     def reload_config(cls):
         """
         Reload the configuration from the file.
+        Resets to defaults and re-applies user config.
         """
         if cls._instance is None:
             raise RuntimeError("ConfigManager not initialized")
@@ -134,12 +195,22 @@ class ConfigManager:
 
     @classmethod
     def config_file_exists(cls):
-        """Check if a valid config file exists."""
+        """
+        Check if a valid config file exists.
+        
+        Returns:
+            bool: True if the config file exists, False otherwise.
+        """
         config_path = os.path.join("src", "config.yaml")
         return os.path.isfile(config_path)
 
     @classmethod
     def console_print(cls, message):
-        """Print a message to the console if enabled in the configuration."""
+        """
+        Print a message to the console if enabled in the configuration.
+        
+        Args:
+            message (str): The message to print.
+        """
         if cls._instance and cls._instance.config["misc"]["print_to_terminal"]:
             print(message)

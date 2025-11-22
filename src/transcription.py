@@ -9,7 +9,13 @@ from utils import ConfigManager
 
 def create_local_model():
     """
-    Create a local model using the faster-whisper library.
+    Create and initialize a local Whisper model using the faster-whisper library.
+    
+    Reads configuration for model size, device (CPU/GPU), and compute type.
+    Handles fallback to CPU if GPU initialization fails.
+    
+    Returns:
+        WhisperModel: The initialized Whisper model.
     """
     ConfigManager.console_print("Creating local model...")
     local_model_options = ConfigManager.get_config_section("model_options")["local"]
@@ -48,13 +54,20 @@ def create_local_model():
 
 def transcribe_local(audio_data, local_model=None):
     """
-    Transcribe an audio file using a local model.
+    Transcribe audio data using the local Whisper model.
+    
+    Args:
+        audio_data (np.array): The audio data to transcribe (int16).
+        local_model (WhisperModel, optional): The model instance to use. If None, a new one is created.
+        
+    Returns:
+        str: The transcribed text.
     """
     if not local_model:
         local_model = create_local_model()
     model_options = ConfigManager.get_config_section("model_options")
 
-    # Convert int16 to float32
+    # Convert int16 to float32 and normalize to [-1, 1]
     audio_data_float = audio_data.astype(np.float32) / 32768.0
 
     response = local_model.transcribe(
@@ -70,7 +83,18 @@ def transcribe_local(audio_data, local_model=None):
 
 def post_process_transcription(transcription):
     """
-    Apply post-processing to the transcription.
+    Apply post-processing rules to the transcribed text.
+    
+    Rules include:
+    - Removing trailing periods
+    - Adding trailing spaces
+    - Removing capitalization
+    
+    Args:
+        transcription (str): The raw transcribed text.
+        
+    Returns:
+        str: The processed text.
     """
     transcription = transcription.strip()
     post_processing = ConfigManager.get_config_section("post_processing")
@@ -86,7 +110,15 @@ def post_process_transcription(transcription):
 
 def transcribe(audio_data, local_model=None):
     """
-    Transcribe audio date using a local model.
+    Main entry point for transcription.
+    Orchestrates the transcription and post-processing steps.
+    
+    Args:
+        audio_data (np.array): The audio data to transcribe.
+        local_model (WhisperModel, optional): The model instance to use.
+        
+    Returns:
+        str: The final processed transcription.
     """
     if audio_data is None:
         return ""

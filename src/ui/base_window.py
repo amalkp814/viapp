@@ -12,9 +12,18 @@ from PyQt5.QtWidgets import (
 
 
 class BaseWindow(QMainWindow):
+    """
+    A base window class that provides a custom frameless UI with a rounded look.
+    It handles window dragging, positioning, and a custom title bar.
+    """
     def __init__(self, title, width, height):
         """
         Initialize the base window.
+        
+        Args:
+            title (str): The window title.
+            width (int): The window width.
+            height (int): The window height.
         """
         super().__init__()
         self.initUI(title, width, height)
@@ -24,8 +33,10 @@ class BaseWindow(QMainWindow):
     def initUI(self, title, width, height):
         """
         Initialize the user interface.
+        Sets up the frameless window, translucent background, and custom title bar.
         """
         self.setWindowTitle(title)
+        # Set flags for frameless window and keeping it on top
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setFixedSize(width, height)
@@ -88,6 +99,7 @@ class BaseWindow(QMainWindow):
     def handleCloseButton(self):
         """
         Close the window.
+        Can be overridden by subclasses for custom close behavior.
         """
         self.close()
 
@@ -116,6 +128,7 @@ class BaseWindow(QMainWindow):
 
     def paintEvent(self, event):
         """
+        Custom paint event to draw the rounded background.
         Create a rounded rectangle with a semi-transparent white background.
         """
         path = QPainterPath()

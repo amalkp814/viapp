@@ -14,22 +14,31 @@ from utils import ConfigManager
 
 
 class viappApp(QObject):
-    stateChanged = pyqtSignal(str)
+    """
+    Main application class for viapp.
+    Manages the application lifecycle, GUI components, and core logic integration.
+    """
+    stateChanged = pyqtSignal(str)  # Signal to notify state changes (e.g., 'idle', 'recording', 'transcribing')
 
     def __init__(self):
         """
         Initialize the application, opening settings window if no configuration file is found.
+        Sets up the main application instance, icon, and configuration manager.
         """
         super().__init__()
         self.app = QApplication(sys.argv)
         self.app.setWindowIcon(QIcon(os.path.join("assets", "v-logo.png")))
 
+        # Initialize the configuration manager to load settings
         ConfigManager.initialize()
 
+        # Initialize the settings window
         self.settings_window = SettingsWindow()
         self.settings_window.settings_closed.connect(self.on_settings_closed)
         self.settings_window.settings_saved.connect(self.restart_app)
 
+        # Check if a configuration file exists. If so, initialize components.
+        # Otherwise, prompt the user to configure settings.
         if ConfigManager.config_file_exists():
             self.initialize_components()
         else:
@@ -38,19 +47,25 @@ class viappApp(QObject):
 
     def initialize_components(self):
         """
-        Initialize the components of the application.
+        Initialize the core components of the application.
+        This includes the input simulator, key listener, transcription model,
+        result processing thread, and the main GUI window.
         """
+        # Initialize input simulator for typing text
         self.input_simulator = InputSimulator()
 
+        # Initialize key listener for global hotkeys
         self.key_listener = KeyListener()
         self.key_listener.add_callback("on_activate", self.on_activation)
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
         self.key_listener.start()
 
+        # Create the local Whisper model for transcription
         self.local_model = create_local_model()
 
         self.result_thread = None
 
+        # Initialize the main window and connect its signals
         self.main_window = MainWindow()
         self.main_window.openSettings.connect(self.settings_window.show)
         self.main_window.startListening.connect(self.on_activation)
@@ -58,15 +73,18 @@ class viappApp(QObject):
         self.main_window.stopListeningAndDiscard.connect(self.stop_result_thread)
         self.main_window.closeApp.connect(self.exit_app)
 
+        # Connect state change signals to update UI
         self.stateChanged.connect(self.main_window.set_state)
         self.stateChanged.connect(self.update_tray_menu)
 
+        # Create system tray icon
         self.create_tray_icon()
         self.main_window.show()
 
     def create_tray_icon(self):
         """
         Create the system tray icon and its context menu.
+        Allows the user to interact with the app from the system tray.
         """
         self.tray_icon = QSystemTrayIcon(
             QIcon(os.path.join("assets", "v-logo.png")), self.app
@@ -77,13 +95,18 @@ class viappApp(QObject):
     def update_tray_menu(self, state):
         """
         Update the system tray icon's context menu based on the application's state.
+        
+        Args:
+            state (str): The current state of the application ('idle', 'recording', etc.)
         """
         tray_menu = QMenu()
 
+        # Action to show the main window
         show_action = QAction(QIcon(os.path.join("assets", "v-logo.png")), "viapp", self.app)
         show_action.triggered.connect(self.main_window.show)
         tray_menu.addAction(show_action)
 
+        # Dynamic action based on state (Start/Stop recording)
         if state == "idle":
             start_action = QAction(QIcon(os.path.join("assets", "mic-rec.png")), "Start", self.app)
             start_action.triggered.connect(self.main_window.show)
@@ -95,10 +118,12 @@ class viappApp(QObject):
             stop_action.triggered.connect(self.on_activation)
             tray_menu.addAction(stop_action)
 
+        # Settings action
         settings_action = QAction(QIcon(os.path.join("assets", "gear.png")), "Settings", self.app)
         settings_action.triggered.connect(self.settings_window.show)
         tray_menu.addAction(settings_action)
 
+        # Exit action
         exit_action = QAction(QIcon(os.path.join("assets", "exit.png")), "Exit", self.app)
         exit_action.triggered.connect(self.exit_app)
         tray_menu.addAction(exit_action)
@@ -106,6 +131,10 @@ class viappApp(QObject):
         self.tray_icon.setContextMenu(tray_menu)
 
     def cleanup(self):
+        """
+        Clean up resources before exiting or restarting.
+        Stops the key listener and input simulator.
+        """
         if self.key_listener:
             self.key_listener.stop()
         if self.input_simulator:
@@ -113,20 +142,23 @@ class viappApp(QObject):
 
     def exit_app(self):
         """
-        Exit the application.
+        Exit the application gracefully.
         """
         self.cleanup()
         QApplication.quit()
 
     def restart_app(self):
-        """Restart the application to apply the new settings."""
+        """
+        Restart the application to apply new settings.
+        """
         self.cleanup()
         QApplication.quit()
         QProcess.startDetached(sys.executable, sys.argv)
 
     def on_settings_closed(self):
         """
-        If settings is closed without saving on first run, initialize the components with default values.
+        Handle the event when the settings window is closed.
+        If closed without saving on the first run, initialize with default values.
         """
         if not os.path.exists(os.path.join("src", "config.yaml")):
             QMessageBox.information(
@@ -138,24 +170,29 @@ class viappApp(QObject):
 
     def on_activation(self):
         """
-        Called when the activation key combination is pressed.
+        Called when the activation key combination is pressed or the start button is clicked.
+        Toggles the recording state.
         """
         self.main_window.show()
+        # If already recording, stop recording
         if self.result_thread and self.result_thread.isRunning():
             recording_mode = ConfigManager.get_config_value(
                 "recording_options", "recording_mode"
             )
+            # For 'press_to_toggle' and 'continuous' modes, stopping is explicit
             if recording_mode in ("press_to_toggle", "continuous"):
                 self.result_thread.stop_recording()
                 self.stateChanged.emit("transcribing")
             return
 
+        # Start recording
         self.start_result_thread()
         self.stateChanged.emit("recording")
 
     def on_deactivation(self):
         """
         Called when the activation key combination is released.
+        Relevant only for 'hold_to_record' mode.
         """
         if (
             ConfigManager.get_config_value("recording_options", "recording_mode")
@@ -168,6 +205,7 @@ class viappApp(QObject):
     def start_result_thread(self):
         """
         Start the result thread to record audio and transcribe it.
+        Initializes the ResultThread and connects its signals.
         """
         if self.result_thread and self.result_thread.isRunning():
             return
@@ -180,7 +218,7 @@ class viappApp(QObject):
 
     def stop_result_thread(self):
         """
-        Stop the result thread.
+        Stop the result thread immediately, discarding any ongoing recording.
         """
         if self.result_thread and self.result_thread.isRunning():
             self.result_thread.stop()
@@ -188,22 +226,34 @@ class viappApp(QObject):
 
     def on_status_update(self, status):
         """
-        Update the main window's state.
+        Update the main window's state based on the result thread's status.
+        
+        Args:
+            status (str): The new status ('recording', 'transcribing', 'idle', 'error')
         """
         self.stateChanged.emit(status)
 
     def on_partial_transcription(self, result):
         """
-        When a partial transcription is available, update the main window.
+        Handle partial transcription results.
+        Updates the main window with the current transcription progress.
+        
+        Args:
+            result (str): The partial transcription text.
         """
         self.main_window.update_transcription_label(result)
 
     def on_transcription_complete(self, result):
         """
-        When the transcription is complete, type the result and start listening for the activation key again.
+        Handle the completion of a transcription.
+        Types the result into the active window and resets the state.
+        
+        Args:
+            result (str): The final transcribed text.
         """
         self.input_simulator.typewrite(result)
 
+        # If in continuous mode, restart the recording thread
         if (
             ConfigManager.get_config_value("recording_options", "recording_mode")
             == "continuous"
@@ -215,7 +265,7 @@ class viappApp(QObject):
 
     def run(self):
         """
-        Start the application.
+        Start the application event loop.
         """
         sys.exit(self.app.exec_())
 

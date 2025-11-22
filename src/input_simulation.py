@@ -10,9 +10,20 @@ from utils import ConfigManager
 class _BaseSimulator:
     """
     A base class for input simulators that handles word replacements.
+    Provides common functionality for text preprocessing before typing.
     """
 
     def _perform_word_replacements(self, text):
+        """
+        Replace words in the text based on the configuration.
+        Uses regex word boundaries to ensure only whole words are replaced.
+        
+        Args:
+            text (str): The input text to process.
+            
+        Returns:
+            str: The text with replacements applied.
+        """
         word_replacements = ConfigManager.get_config_value(
             "post_processing", "word_replacements"
         )
@@ -28,12 +39,19 @@ class _BaseSimulator:
 class _PynputSimulator(_BaseSimulator):
     """
     A class to simulate keyboard input using pynput.
+    This is the cross-platform default simulator.
     """
 
     def __init__(self):
         self.keyboard = PynputController()
 
     def typewrite(self, text):
+        """
+        Simulate typing the given text character by character.
+        
+        Args:
+            text (str): The text to type.
+        """
         text = self._perform_word_replacements(text)
         interval = ConfigManager.get_config_value(
             "post_processing", "writing_key_press_delay"
@@ -44,15 +62,25 @@ class _PynputSimulator(_BaseSimulator):
             time.sleep(interval)
 
     def cleanup(self):
+        """
+        Cleanup resources. No specific cleanup needed for pynput.
+        """
         pass
 
 
 class _YdotoolSimulator(_BaseSimulator):
     """
     A class to simulate keyboard input using ydotool.
+    This is a Linux-specific simulator that works on Wayland.
     """
 
     def typewrite(self, text):
+        """
+        Simulate typing the given text using ydotool.
+        
+        Args:
+            text (str): The text to type.
+        """
         text = self._perform_word_replacements(text)
         try:
             # Add a small delay to allow the user to switch windows
@@ -66,6 +94,9 @@ class _YdotoolSimulator(_BaseSimulator):
             ConfigManager.console_print(f"An error occurred while using ydotool: {e}")
 
     def cleanup(self):
+        """
+        Cleanup resources. No specific cleanup needed for ydotool.
+        """
         pass
 
 
@@ -75,6 +106,10 @@ class InputSimulator:
     """
 
     def __new__(cls):
+        """
+        Create and return an instance of the appropriate simulator class.
+        Checks platform and availability of tools (like ydotool on Linux).
+        """
         input_method = ConfigManager.get_config_value("post_processing", "input_method")
 
         if input_method == "auto":
@@ -113,6 +148,12 @@ class InputSimulator:
 
     @staticmethod
     def _is_ydotool_available():
+        """
+        Check if ydotool is available on the system.
+        
+        Returns:
+            bool: True if ydotool is found, False otherwise.
+        """
         try:
             subprocess.run(["which", "ydotool"], check=True, capture_output=True)
             return True

@@ -16,10 +16,10 @@ class ResultThread(QThread):
 
     This class manages the entire process of:
     1. Recording audio from the microphone
-    2. Detecting speech and silence
+    2. Detecting speech and silence using WebRTC VAD
     3. Saving the recorded audio as numpy array
-    4. Transcribing the audio
-    5. Emitting the transcription result
+    4. Transcribing the audio using the local model
+    5. Emitting the transcription result via signals
 
     Signals:
         statusSignal: Emits the current status of the thread (e.g., 'recording', 'transcribing', 'idle')
@@ -58,7 +58,10 @@ class ResultThread(QThread):
         self.mutex.unlock()
 
     def run(self):
-        """Main execution method for the thread."""
+        """
+        Main execution method for the thread.
+        Handles the recording loop, audio processing, and transcription.
+        """
         try:
             if not self.is_running:
                 return
@@ -70,6 +73,7 @@ class ResultThread(QThread):
             self.statusSignal.emit("recording")
             ConfigManager.console_print("Recording...")
 
+            # Get audio stream and process chunks
             with self._get_audio_stream():
                 for audio_chunk in self._process_audio_queue():
                     if not self.is_running:
@@ -104,11 +108,19 @@ class ResultThread(QThread):
             self.stop_recording()
 
     def _audio_callback(self, indata, frames, time, status):
+        """
+        Callback function for sounddevice input stream.
+        Puts recorded audio data into the queue.
+        """
         if status:
             ConfigManager.console_print(f"Audio callback status: {status}")
         self.audio_queue.put(indata.copy())
 
     def _get_audio_stream(self):
+        """
+        Initialize and return the audio input stream.
+        Handles device selection and fallback logic if the default device fails.
+        """
         recording_options = ConfigManager.get_config_section("recording_options")
         self.sample_rate = recording_options.get("sample_rate") or 16000
         frame_duration_ms = 30
@@ -187,6 +199,10 @@ class ResultThread(QThread):
                 raise e
 
     def _process_audio_queue(self):
+        """
+        Process audio data from the queue.
+        Uses WebRTC VAD to detect speech and yield audio chunks containing speech.
+        """
         recording_options = ConfigManager.get_config_section("recording_options")
         self.sample_rate = recording_options.get("sample_rate") or 16000
         frame_duration_ms = 30
@@ -216,6 +232,7 @@ class ResultThread(QThread):
                 elif speech_detected:
                     silent_frame_count += 1
 
+                # If silence persists for enough frames, consider the speech chunk finished
                 if speech_detected and silent_frame_count > silence_frames:
                     audio_data = np.array(recording, dtype=np.int16)
                     duration = len(audio_data) / self.sample_rate
@@ -230,6 +247,7 @@ class ResultThread(QThread):
             except Exception as e:
                 continue
 
+        # Yield any remaining recording when stopping
         if recording:
             audio_data = np.array(recording, dtype=np.int16)
             duration = len(audio_data) / self.sample_rate
