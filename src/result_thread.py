@@ -234,7 +234,21 @@ class ResultThread(QThread):
                     recording.extend(frame)  # Preserve natural pauses by buffering silence
 
                 # If silence persists for enough frames, consider the speech chunk finished
-                if speech_detected and silent_frame_count > silence_frames:
+                # Dynamic Threshold Logic:
+                # Calculate current duration of the recording buffer
+                current_duration_sec = len(recording) / self.sample_rate
+                
+                # If duration is short (< 2s), use a shorter threshold (e.g., 500ms) for quick commands.
+                # If duration is long (>= 2s), use the standard/longer threshold (e.g., 1000ms) for dictation.
+                if current_duration_sec < 2.0:
+                    effective_silence_frames = int(0.5 * self.sample_rate / frame_size) # 500ms
+                else:
+                    # Use the configured silence duration (defaulting to 1000ms if not set)
+                    # Note: We use a slightly longer default here for better dictation flow
+                    base_silence_ms = recording_options.get("silence_duration") or 1000
+                    effective_silence_frames = int(base_silence_ms / 1000.0 * self.sample_rate / frame_size)
+
+                if speech_detected and silent_frame_count > effective_silence_frames:
                     audio_data = np.array(recording, dtype=np.int16)
                     duration = len(audio_data) / self.sample_rate
                     ConfigManager.console_print(
