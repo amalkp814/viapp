@@ -107,6 +107,13 @@ class MainWindow(BaseWindow):
                 "background-color: transparent; border: none;"
             )
             self.status_label.setText("Transcribing...")
+        elif state == "typing":
+            # You might want a specific icon for typing, or reuse transcribing
+            self.central_button.setIcon(QIcon(os.path.join("assets", "mic-tran.png"))) 
+            self.central_button.setStyleSheet(
+                "background-color: transparent; border: none;"
+            )
+            self.status_label.setText("Typing...")
 
     def update_transcription_label(self, text):
         """

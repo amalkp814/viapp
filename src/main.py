@@ -53,6 +53,8 @@ class viappApp(QObject):
         """
         # Initialize input simulator for typing text
         self.input_simulator = InputSimulator()
+        self.input_simulator.typingStarted.connect(self.on_typing_started)
+        self.input_simulator.typingFinished.connect(self.on_typing_finished)
 
         # Initialize key listener for global hotkeys
         self.key_listener = KeyListener()
@@ -260,8 +262,31 @@ class viappApp(QObject):
         ):
             self.start_result_thread()
         else:
+            # We don't force "idle" here anymore because the input simulator 
+            # will manage the "typing" -> "idle" transition via signals.
+            # However, if we were "transcribing", we might want to ensure we don't get stuck.
+            # But since typewrite is non-blocking, we are effectively done with this transcription task.
+            # The typing signal will trigger immediately after this.
+            pass
+
+    def on_typing_started(self):
+        """
+        Handle the start of text typing.
+        Updates state to 'typing' unless the user is currently recording.
+        """
+        # Prevent overriding the recording state if the user starts speaking while typing occurs
+        if self.main_window.state != "recording":
+            self.stateChanged.emit("typing")
+
+    def on_typing_finished(self):
+        """
+        Handle the completion of text typing.
+        Updates state to 'idle' only if the current state is 'typing'.
+        """
+        # Only revert to idle if we are currently in the typing state.
+        # If the user started recording, we shouldn't switch to idle.
+        if self.main_window.state == "typing":
             self.stateChanged.emit("idle")
-            self.main_window.update_transcription_label("")
 
     def run(self):
         """

@@ -10,12 +10,18 @@ from utils import ConfigManager
 import threading
 from queue import Queue
 
-class _BaseSimulator:
+from PyQt5.QtCore import QObject, pyqtSignal
+
+class _BaseSimulator(QObject):
     """
     A base class for input simulators that handles word replacements.
     Provides common functionality for text preprocessing before typing.
     """
+    typingStarted = pyqtSignal()
+    typingFinished = pyqtSignal()
+
     def __init__(self):
+        super().__init__()
         self.input_queue = Queue()
         self.worker_thread = threading.Thread(target=self._input_worker, daemon=True)
         self.worker_thread.start()
@@ -33,12 +39,15 @@ class _BaseSimulator:
         """
         while True:
             text = self.input_queue.get()
+            self.typingStarted.emit()
             try:
                 self._do_typewrite(text)
             except Exception as e:
                 ConfigManager.console_print(f"Input error: {e}")
             finally:
                 self.input_queue.task_done()
+                if self.input_queue.empty():
+                    self.typingFinished.emit()
 
     def _do_typewrite(self, text):
         """
