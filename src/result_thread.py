@@ -231,6 +231,7 @@ class ResultThread(QThread):
                     recording.extend(frame)
                 elif speech_detected:
                     silent_frame_count += 1
+                    recording.extend(frame)  # Preserve natural pauses by buffering silence
 
                 # If silence persists for enough frames, consider the speech chunk finished
                 if speech_detected and silent_frame_count > silence_frames:
