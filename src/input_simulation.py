@@ -52,6 +52,8 @@ class _PynputSimulator(_BaseSimulator):
         Args:
             text (str): The text to type.
         """
+        from pynput.keyboard import Key
+
         text = self._perform_word_replacements(text)
         interval = ConfigManager.get_config_value(
             "post_processing", "writing_key_press_delay"
@@ -60,6 +62,13 @@ class _PynputSimulator(_BaseSimulator):
             self.keyboard.press(char)
             self.keyboard.release(char)
             time.sleep(interval)
+        
+        # Force Flush Strategy:
+        # Simulate a harmless key press to flush the OS buffer.
+        # This is often required for applications that buffer input (like some editors or remote desktops).
+        time.sleep(0.01)
+        self.keyboard.touch(Key.shift, False) # Release shift just in case
+        time.sleep(0.01)
 
     def cleanup(self):
         """
