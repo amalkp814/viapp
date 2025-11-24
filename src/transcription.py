@@ -48,7 +48,7 @@ def create_local_model():
 
 def transcribe_local(audio_data, local_model=None):
     """
-    Transcribe an audio file using a local model.
+    Transcribe an audio file using a local model and yield results as they become available.
     """
     if not local_model:
         local_model = create_local_model()
@@ -57,7 +57,7 @@ def transcribe_local(audio_data, local_model=None):
     # Convert int16 to float32
     audio_data_float = audio_data.astype(np.float32) / 32768.0
 
-    response = local_model.transcribe(
+    segments, _ = local_model.transcribe(
         audio=audio_data_float,
         language=model_options["common"]["language"],
         initial_prompt=model_options["common"]["initial_prompt"],
@@ -65,7 +65,9 @@ def transcribe_local(audio_data, local_model=None):
         temperature=model_options["common"]["temperature"],
         vad_filter=model_options["local"]["vad_filter"],
     )
-    return "".join([segment.text for segment in list(response[0])])
+
+    for segment in segments:
+        yield segment.text
 
 
 def post_process_transcription(transcription):
@@ -91,6 +93,7 @@ def transcribe(audio_data, local_model=None):
     if audio_data is None:
         return ""
 
-    transcription = transcribe_local(audio_data, local_model)
+    transcription_generator = transcribe_local(audio_data, local_model)
+    full_transcription = "".join(list(transcription_generator))
 
-    return post_process_transcription(transcription)
+    return post_process_transcription(full_transcription)
